@@ -32,6 +32,7 @@ export default function PinPage() {
   const [phase, setPhase] = useState<Phase>("loading");
   const [pin, setPinState] = useState("");
   const [confirming, setConfirming] = useState(false);
+  const [firstPin, setFirstPin] = useState("");
   const [master, setMaster] = useState("");
   const [masterConfirm, setMasterConfirm] = useState("");
   const [dekRaw, setDekRaw] = useState("");
@@ -63,16 +64,14 @@ export default function PinPage() {
 
   const addDigit = useCallback(
     (d: string) => {
-      if (confirming) return;
       if (pin.length < 6) setPinValue(pin + d);
     },
-    [pin, confirming],
+    [pin],
   );
 
   const backspace = useCallback(() => {
-    if (confirming) return;
     setPinValue(pin.slice(0, -1));
-  }, [pin, confirming]);
+  }, [pin]);
 
   const finalizePin = useCallback(
     async (rawDek: string) => {
@@ -172,14 +171,22 @@ export default function PinPage() {
 
   const handleSetPinSubmit = useCallback(() => {
     if (pin.length < 4) return;
+    setError("");
     if (!confirming) {
+      setFirstPin(pin);
       setConfirming(true);
       setPinState("");
-      setError("");
+      return;
+    }
+    if (pin !== firstPin) {
+      setError("PINs don't match. Try again.");
+      setConfirming(false);
+      setFirstPin("");
+      setPinState("");
       return;
     }
     void finalizePin(dekRaw);
-  }, [pin, confirming, dekRaw, finalizePin]);
+  }, [pin, confirming, firstPin, dekRaw, finalizePin]);
 
   if (phase === "loading" || initializing) {
     return (

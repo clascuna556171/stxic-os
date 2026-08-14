@@ -27,12 +27,12 @@ export default function LoginPage() {
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const { user } = useAuth();
+  const { user, sessionReady } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (user) router.replace("/pin");
-  }, [user, router]);
+    if (user && sessionReady) router.replace("/pin");
+  }, [user, sessionReady, router]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -49,6 +49,14 @@ export default function LoginPage() {
       setError(friendlyAuthError((err as Error).message));
       setBusy(false);
     }
+  }
+
+  if (user && !sessionReady) {
+    return (
+      <main className="flex min-h-dvh items-center justify-center">
+        <p className="text-muted text-sm">Preparing your session…</p>
+      </main>
+    );
   }
 
   return (

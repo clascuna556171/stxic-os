@@ -19,6 +19,8 @@ import { getSettings } from "@/lib/hydrate";
 interface AuthState {
   user: User | null;
   initializing: boolean;
+  /** True once the session cookie has been established (or no user). */
+  sessionReady: boolean;
   locked: boolean;
   autoLockMin: number;
   unlock: (key: CryptoKey) => void;
@@ -31,6 +33,7 @@ const AuthContext = createContext<AuthState | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [initializing, setInitializing] = useState(true);
+  const [sessionReady, setSessionReady] = useState(false);
   const [locked, setLocked] = useState(false);
   const [autoLockMin, setAutoLockMin] = useState(5);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -94,6 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setLocked(false);
         void endSession();
       }
+      setSessionReady(true);
       setInitializing(false);
     });
     return unsub;
@@ -112,8 +116,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [locked, user, autoLockMin, resetTimer]);
 
   const value = useMemo(
-    () => ({ user, initializing, locked, autoLockMin, unlock, lock, signOut }),
-    [user, initializing, locked, autoLockMin, unlock, lock, signOut],
+    () => ({ user, initializing, sessionReady, locked, autoLockMin, unlock, lock, signOut }),
+    [user, initializing, sessionReady, locked, autoLockMin, unlock, lock, signOut],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
