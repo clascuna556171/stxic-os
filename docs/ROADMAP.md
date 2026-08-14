@@ -4,11 +4,11 @@
 > Statuses: `[ ]` = not started · `[~]` = in progress · `[x]` = done
 
 ## 0. Foundation
-- [ ] Scaffold Next.js repo (TS + Tailwind + App Router)
-- [ ] Commit this `docs/` folder + master context
-- [ ] Set up ESLint + Prettier + strict TS
-- [ ] Add GitHub repo + issue templates (OSS-ready)
-- [ ] Configure env vars (`process.env` reference list in README)
+- [x] Scaffold Next.js repo (TS + Tailwind + App Router) — Next 16.3.1
+- [x] Commit this `docs/` folder + master context
+- [x] Set up ESLint + Prettier + strict TS
+- [~] Add GitHub repo + issue templates (OSS-ready) — templates committed; push pending
+- [x] Configure env vars (`.env.example` + `process.env` reference list in README)
 
 ## 1. v1 Core
 ### Auth & Data (AGENT AUTH_DB)
