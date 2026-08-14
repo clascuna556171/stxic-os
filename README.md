@@ -37,9 +37,26 @@ npm run dev        # http://localhost:3000
 | `npm run build`        | Production build       |
 | `npm run start`        | Serve production build |
 | `npm run lint`         | ESLint                 |
-| `npm run format`       | Prettier (write)       |
-| `npm run format:check` | Prettier (check only)  |
-| `npm run typecheck`    | `tsc --noEmit`         |
+| `npm run format`     | Prettier (write)                          |
+| `npm run format:check` | Prettier (check only)                   |
+| `npm run typecheck`  | `tsc --noEmit`                            |
+| `npm test`           | Vitest (crypto + utils unit tests)        |
+| `npm run test:rules` | Firestore rules tests (starts emulators)  |
+| `npm run emulators`  | Start Firebase Auth + Firestore emulators |
+
+## Local Development (zero cost)
+
+Auth + Firestore run against local emulators (no Firebase project needed):
+
+```bash
+npm run emulators     # terminal 1 — starts Auth :9099 + Firestore :8080
+npm run dev           # terminal 2 — the app
+```
+
+Copy `.env.example` → `.env.local` and set `NEXT_PUBLIC_FIREBASE_EMULATOR=true`.
+When a real Firebase project is ready, set the `NEXT_PUBLIC_FIREBASE_*` values
+and turn the flag off. Emulators need Java 17+ (`firebase-tools` pinned to
+`^13`, since v14+ requires Java 21).
 
 ## Environment Variables
 

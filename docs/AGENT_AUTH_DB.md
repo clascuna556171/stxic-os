@@ -55,5 +55,14 @@ users/{uid}/demo                 # demo-mode flag + sample data snapshot
   BackupManifest`.
 
 ## Done
-- `npm run build` passes · login→PIN→dashboard unlock end-to-end ·
-  `firestore.rules` complete · encrypt/decrypt round-trip test green.
+- `npm run build` passes · `firestore.rules` complete (deny-all / own-uid,
+  sandboxed `demo` namespace) with emulator rules tests green
+  (`npm run test:rules`) · AES-GCM + PBKDF2 round-trip and DEK wrap/unwrap
+  tests green (`npm test`) · session-cookie server actions
+  (`establishSession` / `endSession` / `setPin` / `verifyPin` /
+  `saveMasterPassword`) implemented in `lib/auth/actions.ts`.
+- Dev runs at zero cost via the Auth/Firestore emulators (`npm run emulators`).
+  Real-project config drops into `.env.local` when ready.
+- Emulators need Java 17+; `firebase-tools` is pinned to `^13` (v14+ requires
+  Java 21).
+- Login→PIN→dashboard UI lands in the UI System tier (next section).

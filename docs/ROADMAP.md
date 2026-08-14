@@ -12,12 +12,12 @@
 
 ## 1. v1 Core
 ### Auth & Data (AGENT AUTH_DB)
-- [ ] Firebase project + Firestore security rules
-- [ ] Email/password signup/login
-- [ ] PIN lock (4-6 digit) + auto-lock timer
-- [ ] Client-side AES-256 (PBKDF2 → AES-GCM)
-- [ ] All `types/*.ts` stable + exported
-- [ ] `firestore.rules` deny-all / own-uid only
+- [x] Firebase project + Firestore security rules (emulator-first; real project drops into `.env.local`)
+- [x] Email/password signup/login (backend + session cookie; UI in UI System tier)
+- [x] PIN lock (4-6 digit) + auto-lock timer (backend set/verify; auto-lock UI in UI System tier)
+- [x] Client-side AES-256 (PBKDF2 → AES-GCM)
+- [x] All `types/*.ts` stable + exported
+- [x] `firestore.rules` deny-all / own-uid only (+ emulator rules tests)
 ### Orchestration (AGENT API)
 - [ ] middleware login guard
 - [ ] `lib/hydrate.ts` all collections

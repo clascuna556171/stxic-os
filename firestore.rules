@@ -1,0 +1,31 @@
+rules_version = '2';
+
+// Stxic — deny-all by default; every user may only touch their own data.
+// The only writable shared surface is the sandboxed `demo` namespace.
+// See docs/AGENT_AUTH_DB.md.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── User-owned data (profile + all subcollections) ───────────────
+    match /users/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+
+      // users/{uid}/vault|notes|tasks|income|habits|focusSessions|
+      // settings|newsConfig|blackboard|fxCache
+      match /{document=**} {
+        allow read, write: if request.auth != null && request.auth.uid == uid;
+      }
+    }
+
+    // ── Demo / guest mode: sandboxed namespace, authenticated users ──
+    // Writes are intentionally allowed so demo users can "Start fresh",
+    // but this namespace never touches real user data.
+    match /demo/{document=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+
+    // Everything else is denied by default.
+  }
+}
