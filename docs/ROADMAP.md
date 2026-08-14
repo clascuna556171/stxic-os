@@ -32,15 +32,15 @@
 - [x] command palette (⌘K / Ctrl+K)
 - [x] manifest + service worker (PWA installable) — manual SW; `@serwist/next` deferred (webpack vs Turbopack)
 ### Core Features (AGENT CORE)
-- [ ] Vault (folders/tags/favorites + generator + strength meter)
-- [ ] Notes (markdown, folders, autosave, templates, export)
-- [ ] Tasks (Kanban + drag-drop + calendar + P0-P2)
-- [ ] Income (multi-currency entries, charts, CSV)
-- [ ] World clocks
-- [ ] Dashboard (income chart, clocks, tasks, FX card)
-- [ ] FX converter (frankfurter, 1h cache, stale badge)
-- [ ] Focus timer (Pomodoro + session logs + weekly stat)
-- [ ] Password strength + reused-password badges
+- [x] Vault (folders/tags/favorites + generator + strength meter)
+- [x] Notes (markdown, folders, autosave, templates, export)
+- [x] Tasks (Kanban + drag-drop + calendar + P0-P2)
+- [x] Income (multi-currency entries, charts, CSV)
+- [x] World clocks
+- [x] Dashboard (income chart, clocks, tasks, FX card)
+- [x] FX converter (frankfurter, 1h cache, stale badge)
+- [x] Focus timer (Pomodoro + session logs + weekly stat)
+- [x] Password strength + reused-password badges
 ### Backup & Demo (AGENT BACKUP_DEMO)
 - [ ] .stxbak encrypted export + restore
 - [ ] Demo/guest mode (sandboxed sample data)

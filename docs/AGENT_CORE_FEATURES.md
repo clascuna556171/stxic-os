@@ -34,8 +34,21 @@
 - Lazy-load Recharts + editor via dynamic import. Firestore reads paginated.
 
 ## Done
-- Each feature renders from real Firestore data with loading + empty states.
-- Converter shows real rate, 1h cache, stale badge offline.
-- Drag-drop persists status; calendar reflects dues; income chart correct;
-  CSV opens in Excel; focus session logs and shows weekly stat; strength
-  meter + reuse badge correct.
+- Vault: folder/tag/favorite filters, search, add/edit dialog, delete confirm,
+  local password generator (length 8–64, sets, exclusions), strength meter
+  (`lib/strength`), reused-password badges (`lib/vault`, SHA-256 local).
+- Notes: folder tree + list, markdown editor (textarea + lazy react-markdown
+  preview/split), 1s debounced autosave with saved indicator, built-in
+  templates, `.md` export.
+- Tasks: Kanban To Do/In Progress/Done with @dnd-kit drag between columns
+  (persists status), P0–P2 badges, month calendar with per-day pills + overdue.
+- Income: multi-currency entries, per-currency summary, monthly Recharts chart
+  (lazy), CSV export, FX converter card.
+- FX: `/api/fx/rate` (frankfurter, 1h Firestore cache), `lib/fx` client with
+  stale flag, converter on dashboard + income.
+- World clocks: live timezone cards (UTC offset + seconds), add/remove,
+  persisted to `settings.clocks`.
+- Focus: Pomodoro 25/5/15 (editable), binds to a task, logs `focusSessions`,
+  weekly stat on dashboard + focus page.
+- Dashboard: today's tasks, weekly focus stat, clocks, FX converter, income
+  chart, ⌘K quick-launcher hint — each with loading/empty states.

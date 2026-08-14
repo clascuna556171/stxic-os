@@ -41,8 +41,8 @@ httpOnly cookie `stxic_session`.
 | GET | `/api/news/saved` | NEWS | stub |
 | POST | `/api/badsde/sync` | BADS-DE | stub |
 | POST | `/api/badsde/draft` | BADS-DE | stub |
-| GET | `/api/fx/rate?base=USD&quote=PHP` | CORE | stub (1h cache) |
-| POST | `/api/focus/session` | CORE | stub |
+| GET | `/api/fx/rate?base=USD&quote=PHP` | CORE | live (1h cache) |
+| POST | `/api/focus/session` | CORE | stub → use `saveFocusSession` (client-side encrypted) |
 | POST | `/api/backup/export` | BACKUP | stub |
 | POST | `/api/backup/restore` | BACKUP | stub |
 | POST | `/api/convert/file` | EXTRAS | stub (client-side fallback) |
