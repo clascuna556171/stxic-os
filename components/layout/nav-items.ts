@@ -5,6 +5,7 @@ import {
   LayoutDashboard,
   ListTodo,
   Settings,
+  Timer,
   type LucideIcon,
 } from "lucide-react";
 import type { FeatureKey } from "@/lib/config/features";
@@ -27,5 +28,6 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Notes", href: "/notes", icon: FileText, feature: "notes" },
   { label: "Tasks", href: "/tasks", icon: ListTodo, feature: "tasks" },
   { label: "Income", href: "/income", icon: CircleDollarSign, feature: "income" },
+  { label: "Focus", href: "/focus", icon: Timer, feature: "focus" },
   { label: "Settings", href: "/settings", icon: Settings },
 ];
