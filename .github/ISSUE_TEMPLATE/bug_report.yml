@@ -1,0 +1,50 @@
+name: Bug report
+description: Report a bug or unexpected behavior
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug report. Please be as specific
+        as possible so we can reproduce it.
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What happened? What did you expect to happen instead?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Ordered steps that trigger the bug.
+      placeholder: |
+        1. Go to …
+        2. Click …
+        3. See error …
+    validations:
+      required: true
+  - type: input
+    id: surface
+    attributes:
+      label: Surface
+      description: Which feature/page is affected? (vault, notes, tasks, news, …)
+  - type: dropdown
+    id: theme
+    attributes:
+      label: Theme
+      options:
+        - Dark
+        - Light
+        - Both
+  - type: input
+    id: env
+    attributes:
+      label: Environment
+      description: OS + browser/version (and device if mobile).
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / console output
+      render: shell
