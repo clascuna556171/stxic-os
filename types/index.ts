@@ -138,6 +138,8 @@ export interface UserSettings {
   /** Auto-lock minutes, 1–60, default 5. */
   autoLockMin: number;
   defaultCurrency: Currency;
+  /** IANA timezone ids pinned to the dashboard world-clocks widget. */
+  clocks?: string[];
   /** PIN verification hash (PBKDF2), set once. */
   pinHash?: string;
   /** Salt used to derive the PIN KEK. */
