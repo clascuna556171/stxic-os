@@ -1,4 +1,11 @@
-import { FileText, KeyRound, LayoutDashboard, Settings, type LucideIcon } from "lucide-react";
+import {
+  FileText,
+  KeyRound,
+  LayoutDashboard,
+  ListTodo,
+  Settings,
+  type LucideIcon,
+} from "lucide-react";
 import type { FeatureKey } from "@/lib/config/features";
 
 export interface NavItem {
@@ -17,5 +24,6 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Vault", href: "/vault", icon: KeyRound, feature: "vault" },
   { label: "Notes", href: "/notes", icon: FileText, feature: "notes" },
+  { label: "Tasks", href: "/tasks", icon: ListTodo, feature: "tasks" },
   { label: "Settings", href: "/settings", icon: Settings },
 ];
