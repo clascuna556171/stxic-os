@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/toaster";
 import { IncomeEntryDialog } from "@/components/features/income/income-entry-dialog";
+import { FxConverter } from "@/components/features/fx/fx-converter";
 import { getSettings, deleteIncomeEntry, listIncome, saveIncomeEntry } from "@/lib/hydrate";
 import { groupByMonth, incomeToCsv, monthKey, monthlyTotals } from "@/lib/income";
 import { downloadCsv, toCsv } from "@/lib/utils/csv";
@@ -189,14 +190,25 @@ export default function IncomePage() {
         />
       ) : (
         <>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle>Monthly totals</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <IncomeChart data={monthly} currency={defaultCurrency} />
-            </CardContent>
-          </Card>
+          <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[1fr_20rem]">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle>Monthly totals</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <IncomeChart data={monthly} currency={defaultCurrency} />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle>Convert</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <FxConverter />
+              </CardContent>
+            </Card>
+          </div>
 
           <div className="flex flex-col gap-4">
             {groups.map((g) => (
