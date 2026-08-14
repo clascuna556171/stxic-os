@@ -2,10 +2,12 @@
 
 ## Ownership
 - `/api/*` routes + Server Actions · `lib/hydrate.ts` (single read/write API
-  for ALL agents) · `lib/config/features.ts` · `middleware.ts`
+  for ALL agents) · `lib/config/features.ts` · `proxy.ts`
 
 ## Responsibilities
-1. Middleware guard → redirect unsigned to `/(auth)/login`.
+1. Proxy login guard → redirect unsigned to `/(auth)/login`. (Next 16 renamed
+   `middleware` → `proxy`; guard is a UX convenience — enforcement lives in
+   Firestore rules + route/action checks.)
 2. Route map (stubs now, wire as agents ship):
    - `POST /api/auth/verify-pin` (AUTH)
    - `POST /api/ai/chat` streaming (AI)
@@ -34,5 +36,5 @@
 - Routes idempotent (safe retry). FX + RSS cached + rate-limited.
 
 ## Done
-- Middleware login redirect; hydrate exposes every collection; flags hide
-  unfinished nav in dev+prod.
+- Proxy login redirect; hydrate exposes every collection; flags hide
+  unfinished nav in dev+prod; route stubs + `docs/API.md` in place.

@@ -22,15 +22,20 @@ export async function createSessionCookie(idToken: string): Promise<string> {
   });
 }
 
-/** Verify the session cookie and return the uid, or null when unsigned. */
-export async function getSessionUserId(): Promise<string | null> {
-  const store = await cookies();
-  const token = store.get(SESSION_COOKIE)?.value;
-  if (!token) return null;
+/** Verify a raw session-cookie token and return the uid, or null. */
+export async function verifySessionToken(token: string): Promise<string | null> {
   try {
     const decoded = await getAdminAuth().verifySessionCookie(token, true);
     return decoded.uid;
   } catch {
     return null;
   }
+}
+
+/** Verify the session cookie and return the uid, or null when unsigned. */
+export async function getSessionUserId(): Promise<string | null> {
+  const store = await cookies();
+  const token = store.get(SESSION_COOKIE)?.value;
+  if (!token) return null;
+  return verifySessionToken(token);
 }

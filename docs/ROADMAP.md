@@ -19,10 +19,10 @@
 - [x] All `types/*.ts` stable + exported
 - [x] `firestore.rules` deny-all / own-uid only (+ emulator rules tests)
 ### Orchestration (AGENT API)
-- [ ] middleware login guard
-- [ ] `lib/hydrate.ts` all collections
-- [ ] feature flags + hidden nav
-- [ ] route stubs + `docs/API.md`
+- [x] proxy login guard (Next 16 `proxy.ts` — middleware renamed)
+- [x] `lib/hydrate.ts` all collections
+- [x] feature flags + hidden nav
+- [x] route stubs + `docs/API.md`
 ### UI System (AGENT UI)
 - [ ] UI craft skill adopted (AGENT_UI_SKILL.md: anti-slop, 3 dials, a11y, motion)
 - [ ] design tokens dark + light

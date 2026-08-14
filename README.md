@@ -31,18 +31,18 @@ npm run dev        # http://localhost:3000
 
 ## Scripts
 
-| Command                | Purpose                |
-| ---------------------- | ---------------------- |
-| `npm run dev`          | Start dev server       |
-| `npm run build`        | Production build       |
-| `npm run start`        | Serve production build |
-| `npm run lint`         | ESLint                 |
-| `npm run format`     | Prettier (write)                          |
-| `npm run format:check` | Prettier (check only)                   |
-| `npm run typecheck`  | `tsc --noEmit`                            |
-| `npm test`           | Vitest (crypto + utils unit tests)        |
-| `npm run test:rules` | Firestore rules tests (starts emulators)  |
-| `npm run emulators`  | Start Firebase Auth + Firestore emulators |
+| Command                | Purpose                                   |
+| ---------------------- | ----------------------------------------- |
+| `npm run dev`          | Start dev server                          |
+| `npm run build`        | Production build                          |
+| `npm run start`        | Serve production build                    |
+| `npm run lint`         | ESLint                                    |
+| `npm run format`       | Prettier (write)                          |
+| `npm run format:check` | Prettier (check only)                     |
+| `npm run typecheck`    | `tsc --noEmit`                            |
+| `npm test`             | Vitest (crypto + utils unit tests)        |
+| `npm run test:rules`   | Firestore rules tests (starts emulators)  |
+| `npm run emulators`    | Start Firebase Auth + Firestore emulators |
 
 ## Local Development (zero cost)
 
