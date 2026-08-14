@@ -48,6 +48,18 @@
 - Provide manifest + theme-color meta + SW registration for PWA install.
 
 ## Done
-- Primitives exported from `components/ui/index.ts`; palette ⌘K fuzzy ≥5
-  providers; preset + accent + dark/light live-update all pages; PWA install
-  prompt works; design matches reference on dashboard/vault/news.
+- Primitives exported from `components/ui/index.ts` (Button, Input, Textarea,
+  Label, Card, Badge, Skeleton, EmptyState, Kbd, ProgressRing, Dialog, Tooltip,
+  Toast, Switch, Select, Tabs) — cva + tailwind-merge, Radix for a11y-critical
+  ones.
+- Design tokens dark (`#0A0A0A`) + light (`#F7F7F8`) in `styles/globals.css`;
+  Tailwind v4 `@theme` mapping; Inter + JetBrains Mono via `next/font`.
+- Preset registry (Stxc, Mars, Midnight, Mono) + accent picker + dark/light
+  toggle live-update via CSS vars (`lib/theme.ts`, `ThemeProvider`).
+- Command palette (⌘K/Ctrl+K) over nav + actions with `fuzzysort`.
+- Layout shell (Sidebar/Topbar/mobile bottom-nav) + login/PIN/dashboard/
+  settings pages wired to the auth + hydrate layers.
+- PWA: `manifest.webmanifest` + generated icons + manual service worker
+  (`public/sw.js`). Note: `@serwist/next` was reverted — it injects a `webpack`
+  config that conflicts with Next 16's Turbopack default build. Migrate to
+  `@serwist/turbopack` (or configurator mode) once it's stable for precaching.

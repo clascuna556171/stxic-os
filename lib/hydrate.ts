@@ -23,6 +23,7 @@ import type {
   NewsConfig,
   Note,
   TaskItem,
+  UserProfile,
   UserSettings,
   VaultItem,
 } from "@/types";
@@ -133,6 +134,22 @@ export const deleteHabit = (id: string) => removeEncrypted("habits", id);
 export const listFocusSessions = () => readEncrypted<FocusSession>("focusSessions");
 export const saveFocusSession = (item: FocusSession) => writeEncrypted("focusSessions", item);
 export const deleteFocusSession = (id: string) => removeEncrypted("focusSessions", id);
+
+// ─────────────────────────────────────────────────────────────
+// Profile (users/{uid} doc — salts + wrapped DEKs)
+// ─────────────────────────────────────────────────────────────
+
+export async function getProfile(): Promise<Envelope<UserProfile>> {
+  const uid = currentUid();
+  if (!uid) return { ok: false, error: "Unauthorized" };
+  try {
+    const snap = await getDoc(doc(getDb(), `users/${uid}`));
+    if (!snap.exists()) return { ok: false, error: "No profile" };
+    return { ok: true, data: snap.data() as UserProfile };
+  } catch (error) {
+    return { ok: false, error: (error as Error).message };
+  }
+}
 
 // ─────────────────────────────────────────────────────────────
 // Settings (plaintext doc; sensitive sub-fields individually encrypted)

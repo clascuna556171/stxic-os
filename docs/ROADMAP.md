@@ -24,13 +24,13 @@
 - [x] feature flags + hidden nav
 - [x] route stubs + `docs/API.md`
 ### UI System (AGENT UI)
-- [ ] UI craft skill adopted (AGENT_UI_SKILL.md: anti-slop, 3 dials, a11y, motion)
-- [ ] design tokens dark + light
-- [ ] preset registry (Stxc, Mars, Midnight, Mono)
-- [ ] accent picker + live preview
-- [ ] primitive components library
-- [ ] command palette (⌘K / Ctrl+K)
-- [ ] manifest + service worker (PWA installable)
+- [x] UI craft skill adopted (AGENT_UI_SKILL.md: anti-slop, 3 dials, a11y, motion)
+- [x] design tokens dark + light
+- [x] preset registry (Stxc, Mars, Midnight, Mono)
+- [x] accent picker + live preview
+- [x] primitive components library
+- [x] command palette (⌘K / Ctrl+K)
+- [x] manifest + service worker (PWA installable) — manual SW; `@serwist/next` deferred (webpack vs Turbopack)
 ### Core Features (AGENT CORE)
 - [ ] Vault (folders/tags/favorites + generator + strength meter)
 - [ ] Notes (markdown, folders, autosave, templates, export)
