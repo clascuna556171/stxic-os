@@ -1,4 +1,5 @@
 import {
+  CircleDollarSign,
   FileText,
   KeyRound,
   LayoutDashboard,
@@ -25,5 +26,6 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Vault", href: "/vault", icon: KeyRound, feature: "vault" },
   { label: "Notes", href: "/notes", icon: FileText, feature: "notes" },
   { label: "Tasks", href: "/tasks", icon: ListTodo, feature: "tasks" },
+  { label: "Income", href: "/income", icon: CircleDollarSign, feature: "income" },
   { label: "Settings", href: "/settings", icon: Settings },
 ];
