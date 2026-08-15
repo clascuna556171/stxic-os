@@ -22,7 +22,7 @@ export const features = {
   // ── v1.5 Extras (flag-gated) ───────────────────────────────
   news: false,
   habits: false,
-  ai: false,
+  ai: true,
   badsde: false,
   convert: false,
   obsidian: false,

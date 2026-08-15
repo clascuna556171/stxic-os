@@ -7,6 +7,7 @@ import {
 } from "@/lib/ai/prompts";
 import { CANNED_FALLBACK, resolveProvider } from "@/lib/ai/config";
 import { chat, streamChat } from "@/lib/ai/router";
+import { parseSseLine } from "@/lib/ai/client";
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -95,5 +96,18 @@ describe("streamChat", () => {
     }
     expect(events[0]).toMatchObject({ type: "delta", fallback: true, text: CANNED_FALLBACK });
     expect(events[1]).toMatchObject({ type: "done", fallback: true });
+  });
+});
+
+describe("parseSseLine", () => {
+  it("parses a delta event", () => {
+    const ev = parseSseLine('data: {"type":"delta","text":"hi","provider":"groq"}');
+    expect(ev).toEqual({ type: "delta", text: "hi", provider: "groq" });
+  });
+
+  it("ignores non-data lines and malformed JSON", () => {
+    expect(parseSseLine("event: message")).toBeNull();
+    expect(parseSseLine("data: not json")).toBeNull();
+    expect(parseSseLine('data: {"nope":1}')).toBeNull();
   });
 });

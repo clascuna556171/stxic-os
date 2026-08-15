@@ -5,6 +5,7 @@ import {
   LayoutDashboard,
   ListTodo,
   Settings,
+  Sparkles,
   Timer,
   type LucideIcon,
 } from "lucide-react";
@@ -29,5 +30,6 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Tasks", href: "/tasks", icon: ListTodo, feature: "tasks" },
   { label: "Income", href: "/income", icon: CircleDollarSign, feature: "income" },
   { label: "Focus", href: "/focus", icon: Timer, feature: "focus" },
+  { label: "AI chat", href: "/ai", icon: Sparkles, feature: "ai" },
   { label: "Settings", href: "/settings", icon: Settings },
 ];
