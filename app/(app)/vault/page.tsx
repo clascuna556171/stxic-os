@@ -335,7 +335,7 @@ export default function VaultPage() {
       )}
 
       <VaultItemDialog
-        key={dialogKey}
+        key={`item-${dialogKey}`}
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         initial={editing}
@@ -343,7 +343,11 @@ export default function VaultPage() {
         onSave={onSave}
       />
 
-      <PasswordGenerator key={generatorKey} open={generatorOpen} onOpenChange={setGeneratorOpen} />
+      <PasswordGenerator
+        key={`gen-${generatorKey}`}
+        open={generatorOpen}
+        onOpenChange={setGeneratorOpen}
+      />
 
       <Dialog open={deleting !== null} onOpenChange={(o) => !o && setDeleting(null)}>
         <DialogContent>
