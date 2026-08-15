@@ -62,6 +62,25 @@ describe("parseFeed (Atom)", () => {
     expect(items[0]!.author).toBe("John");
     expect(items[0]!.summary).toBe("Atom summary text");
   });
+
+  it("parses Reddit .rss entries (u/ author + comments permalink)", () => {
+    const reddit = `<?xml version="1.0"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+<entry>
+  <title>Neural nets are neat</title>
+  <link href="https://www.reddit.com/r/MachineLearning/comments/abc123/neural_nets/" rel="alternate"/>
+  <updated>2026-08-15T08:00:00Z</updated>
+  <author><name>/u/researcher</name></author>
+  <content type="html">&lt;div&gt;Post body here&lt;/div&gt;</content>
+</entry>
+</feed>`;
+    const items = parseFeed(reddit, source, 0);
+    expect(items).toHaveLength(1);
+    expect(items[0]!.title).toBe("Neural nets are neat");
+    expect(items[0]!.url).toContain("/r/MachineLearning/comments/");
+    expect(items[0]!.author).toBe("/u/researcher");
+    expect(items[0]!.summary).toBe("Post body here");
+  });
 });
 
 describe("dedupeAndSort", () => {

@@ -18,16 +18,14 @@ function decodeEntities(s: string): string {
     .replace(/&nbsp;/g, " ");
 }
 
-/** Strip CDATA markers + tags + collapse whitespace. */
+/** Strip CDATA markers + tags + collapse whitespace. Entities decode first. */
 export function cleanText(raw: string): string {
-  return decodeEntities(
-    raw
-      .replace(/<!\[CDATA\[/g, "")
-      .replace(/\]\]>/g, "")
-      .replace(/<[^>]*>/g, " ")
-      .replace(/\s+/g, " ")
-      .trim(),
-  );
+  return decodeEntities(raw)
+    .replace(/<!\[CDATA\[/g, "")
+    .replace(/\]\]>/g, "")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 /** First inner text of `<tag>` … `</tag>`, or "" when absent. */
