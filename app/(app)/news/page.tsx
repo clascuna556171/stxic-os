@@ -15,10 +15,11 @@ import { newsItemToNote, NEWS_NOTE_FOLDER } from "@/lib/news/note";
 import { NEWS_SOURCES } from "@/lib/news/sources";
 import { relativeTime } from "@/lib/utils/dates";
 import { cn } from "@/lib/utils/cn";
-import type { NewsCategory, NewsItem } from "@/lib/news/types";
+import type { NewsCategory, NewsItem, NewsSource } from "@/lib/news/types";
 import type { NewsConfig, Note } from "@/types";
 
-const CATEGORIES: (NewsCategory | "all")[] = ["all", "AI", "Tech", "Dev", "Startups", "Research"];
+const CATEGORY_ORDER: NewsCategory[] = ["AI", "Tech", "Dev", "Startups", "Research"];
+const CATEGORIES: (NewsCategory | "all")[] = ["all", ...CATEGORY_ORDER];
 const AUTO_REFRESH_MS = 15 * 60 * 1000;
 
 function sourceEnabled(config: NewsConfig, id: string): boolean {
@@ -111,6 +112,20 @@ export default function NewsPage() {
     [items, category],
   );
 
+  const sourcesByCategory = useMemo(() => {
+    const grouped = new Map<NewsCategory, NewsSource[]>();
+    for (const c of CATEGORY_ORDER) grouped.set(c, []);
+    for (const s of NEWS_SOURCES) grouped.get(s.category)?.push(s);
+    return [...grouped.entries()].filter(([, list]) => list.length > 0);
+  }, []);
+
+  const categoryCounts = useMemo(() => {
+    const counts = new Map<NewsCategory | "all", number>();
+    counts.set("all", items.length);
+    for (const c of CATEGORY_ORDER) counts.set(c, items.filter((i) => i.category === c).length);
+    return counts;
+  }, [items]);
+
   const enabledCount = NEWS_SOURCES.filter((s) => sourceEnabled(config, s.id)).length;
 
   function updateConfig(next: NewsConfig) {
@@ -124,6 +139,10 @@ export default function NewsPage() {
       ? config.sources.map((s) => (s.id === id ? { ...s, enabled: !s.enabled } : s))
       : [...config.sources, { id, enabled: false }];
     updateConfig({ ...config, sources });
+  }
+
+  function setAllSources(on: boolean) {
+    updateConfig({ ...config, sources: NEWS_SOURCES.map((s) => ({ id: s.id, enabled: on })) });
   }
 
   async function persistNote(note: Note): Promise<boolean> {
@@ -219,23 +238,54 @@ export default function NewsPage() {
         </div>
       </header>
 
-      <div className="flex flex-wrap items-center gap-1.5">
-        {NEWS_SOURCES.map((s) => {
-          const on = sourceEnabled(config, s.id);
-          return (
-            <button
-              key={s.id}
-              type="button"
-              onClick={() => toggleSource(s.id)}
-              className={cn(
-                "border-border text-muted rounded-full border px-3 py-1 text-xs transition-colors",
-                on && "border-accent/40 bg-accent/10 text-foreground",
-              )}
-            >
-              {s.name}
-            </button>
-          );
-        })}
+      <div className="border-border rounded-lg border p-3">
+        <div className="mb-2 flex items-center justify-between">
+          <span className="text-muted text-xs font-medium tracking-wide">
+            Sources · {enabledCount}/{NEWS_SOURCES.length}
+          </span>
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="sm" onClick={() => setAllSources(true)}>
+              All
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => setAllSources(false)}>
+              None
+            </Button>
+          </div>
+        </div>
+        <div className="flex flex-col gap-2">
+          {sourcesByCategory.map(([cat, list]) => (
+            <div key={cat} className="flex flex-col gap-1">
+              <span className="text-muted text-[11px] font-medium tracking-wide uppercase">
+                {cat}
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {list.map((s) => {
+                  const on = sourceEnabled(config, s.id);
+                  return (
+                    <button
+                      key={s.id}
+                      type="button"
+                      aria-pressed={on}
+                      onClick={() => toggleSource(s.id)}
+                      className={cn(
+                        "flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-colors",
+                        on
+                          ? "border-accent/40 bg-accent/10 text-foreground"
+                          : "border-border bg-surface text-muted hover:text-foreground",
+                      )}
+                    >
+                      <span
+                        className={cn("size-1.5 rounded-full", on ? "bg-accent" : "bg-surface-2")}
+                        aria-hidden
+                      />
+                      {s.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       <Tabs defaultValue="feed">
@@ -259,11 +309,14 @@ export default function NewsPage() {
                 type="button"
                 onClick={() => setCategory(c)}
                 className={cn(
-                  "text-muted hover:text-foreground rounded-lg px-3 py-1.5 text-sm transition-colors",
+                  "text-muted hover:text-foreground flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm transition-colors",
                   category === c && "bg-surface-2 text-foreground font-medium",
                 )}
               >
                 {c === "all" ? "All" : `#${c}`}
+                <span className="text-muted text-xs tabular-nums">
+                  {categoryCounts.get(c) ?? 0}
+                </span>
               </button>
             ))}
           </div>
@@ -272,7 +325,12 @@ export default function NewsPage() {
             <EmptyState
               icon={<Newspaper />}
               title="No sources enabled"
-              description="Turn on a source above to populate your feed."
+              description="Turn on sources above, or enable them all at once."
+              action={
+                <Button variant="secondary" size="sm" onClick={() => setAllSources(true)}>
+                  Enable all
+                </Button>
+              }
             />
           ) : feedState === "loading" ? (
             <div className="border-border divide-y rounded-lg border">
