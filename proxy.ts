@@ -1,17 +1,21 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { SESSION_COOKIE, verifySessionToken } from "@/lib/auth/session";
 
 /**
  * Next 16 login guard (`middleware` was renamed `proxy` — see
  * docs/AGENT_API_ORCHESTRATION.md). Redirects unsigned visitors to /login.
- * This is a UX convenience: real enforcement lives in the Firestore rules
- * (own-uid only) and inside route handlers / server actions.
+ *
+ * IMPORTANT: this is an OPTIMISTIC check only — it verifies the session
+ * cookie's presence, not its signature. Proxy runs on the Edge runtime,
+ * which cannot load `firebase-admin` (the `jose` ESM dependency fails on
+ * `require()`). Real enforcement lives in the Firestore rules (own-uid only)
+ * and inside route handlers / server actions, which run on Node.
  */
 
+const SESSION_COOKIE = "stxic_session";
 const PUBLIC_PATHS = new Set(["/login", "/demo", "/_not-found"]);
 
-export async function proxy(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (PUBLIC_PATHS.has(pathname) || pathname.startsWith("/p/")) {
@@ -19,7 +23,7 @@ export async function proxy(request: NextRequest) {
   }
 
   const token = request.cookies.get(SESSION_COOKIE)?.value;
-  if (token && (await verifySessionToken(token))) {
+  if (token) {
     return NextResponse.next();
   }
 
