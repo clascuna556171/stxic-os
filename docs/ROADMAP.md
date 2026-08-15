@@ -7,7 +7,7 @@
 - [x] Scaffold Next.js repo (TS + Tailwind + App Router) — Next 16.3.1
 - [x] Commit this `docs/` folder + master context
 - [x] Set up ESLint + Prettier + strict TS
-- [~] Add GitHub repo + issue templates (OSS-ready) — templates committed; push pending
+- [x] Add GitHub repo + issue templates (OSS-ready) — pushed to origin
 - [x] Configure env vars (`.env.example` + `process.env` reference list in README)
 
 ## 1. v1 Core
@@ -52,12 +52,12 @@
 - [x] **v1 release tag v1.0.0** 🎉
 
 ## 2. v1.5 Extras (flag-gated)
-- [x] News hub: RSS aggregate + TL;DR + save to notes
+- [x] News hub: RSS/Atom aggregate + TL;DR + save to notes (official lab feeds + Reddit sources)
 - [x] Reading list (save for later → notes)
 - [x] AI chat (Groq streaming + Ollama local fallback)
 - [x] AI daily digest on dashboard
 - [x] AI study planner
-- [x] BADS-DE: iCal sync + drafts + risk pill (UM Blackboard)
+- [x] BADS-DE: iCal sync + drafts + risk pill (UM Blackboard) — sync button in Tasks + Semester
 - [ ] BADS-DE: Google Calendar OAuth2 mirror (deferred)
 - [x] Habit tracker (streaks + AI nudges)
 - [x] File→text converter (PDF/DOCX/TXT/MD/CSV/XLSX/HTML)
@@ -69,6 +69,7 @@
 - [x] Semester planner (term grid)
 - [x] Custom dashboard grid (drag-resize widgets)
 - [ ] AI OCR for scanned PDFs (after converter)
+- [ ] **v1.5 release tag v1.5.0** — push `main` + tag
 
 ## 3. v2 Future (not scheduled)
 - [ ] Android APK via Capacitor (same codebase)
