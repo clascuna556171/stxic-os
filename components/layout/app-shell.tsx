@@ -27,7 +27,7 @@ function ShellLoading() {
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
-  const { initializing, locked } = useAuth();
+  const { initializing, locked, demo, startFresh } = useAuth();
   const router = useRouter();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const items = useCommandItems();
@@ -45,6 +45,22 @@ export function AppShell({ children }: { children: ReactNode }) {
       <Sidebar />
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar />
+        {demo ? (
+          <div className="border-border bg-warning/10 flex items-center justify-between gap-3 border-b px-4 py-1.5 text-xs">
+            <span className="text-warning">
+              Demo data — not real. Changes are local to this guest session.
+            </span>
+            <button
+              type="button"
+              className="text-warning shrink-0 font-medium hover:underline"
+              onClick={() => {
+                void startFresh().then(() => window.location.reload());
+              }}
+            >
+              Start fresh
+            </button>
+          </div>
+        ) : null}
         <main className="flex-1 px-4 pt-6 pb-20 md:px-6 md:pb-6">{children}</main>
       </div>
       <MobileNav />

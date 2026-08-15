@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useTheme } from "@/components/theme/theme-provider";
+import { useAuth } from "@/components/auth/auth-provider";
 import { BackupCard } from "@/components/features/backup/backup-card";
 import { PRESET_LIST, hexToHue, hueToHex } from "@/lib/theme";
 import { getSettings, saveSettings } from "@/lib/hydrate";
@@ -23,6 +24,7 @@ const AUTO_LOCK_OPTIONS = [1, 2, 5, 10, 15, 30, 60];
 
 export default function SettingsPage() {
   const { theme, preset, accent, setTheme, setPreset, setAccent } = useTheme();
+  const { demo } = useAuth();
   const [autoLockMin, setAutoLockMin] = useState(5);
 
   useEffect(() => {
@@ -136,7 +138,7 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      <BackupCard />
+      <BackupCard disabled={demo} />
 
       <Card className="opacity-70">
         <CardHeader className="flex-row items-center justify-between">

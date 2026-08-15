@@ -26,7 +26,7 @@ import { passwordStrength } from "@/lib/strength";
 type Phase = "loading" | "verify" | "onboardMaster" | "onboardPin" | "recoverMaster" | "recoverPin";
 
 export default function PinPage() {
-  const { user, initializing, unlock } = useAuth();
+  const { user, initializing, unlock, demo } = useAuth();
   const router = useRouter();
 
   const [phase, setPhase] = useState<Phase>("loading");
@@ -39,10 +39,11 @@ export default function PinPage() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
-  // Guard: require a signed-in user.
+  // Guard: require a signed-in user; demo guests skip the PIN gate.
   useEffect(() => {
-    if (!initializing && !user) router.replace("/login");
-  }, [initializing, user, router]);
+    if (demo) router.replace("/dashboard");
+    else if (!initializing && !user) router.replace("/login");
+  }, [initializing, user, demo, router]);
 
   // Decide onboarding vs verify.
   useEffect(() => {

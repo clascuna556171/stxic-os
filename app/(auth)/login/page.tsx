@@ -2,7 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
+import {
+  createUserWithEmailAndPassword,
+  signInAnonymously,
+  signInWithEmailAndPassword,
+} from "firebase/auth";
 import { getAuthClient } from "@/lib/firebase/client";
 import { useAuth } from "@/components/auth/auth-provider";
 import { Button } from "@/components/ui/button";
@@ -31,7 +35,7 @@ export default function LoginPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (user && sessionReady) router.replace("/pin");
+    if (user && sessionReady) router.replace(user.isAnonymous ? "/dashboard" : "/pin");
   }, [user, sessionReady, router]);
 
   async function onSubmit(e: React.FormEvent) {
@@ -45,6 +49,17 @@ export default function LoginPage() {
       } else {
         await signInWithEmailAndPassword(auth, email.trim(), password);
       }
+    } catch (err) {
+      setError(friendlyAuthError((err as Error).message));
+      setBusy(false);
+    }
+  }
+
+  async function tryDemo() {
+    setBusy(true);
+    setError("");
+    try {
+      await signInAnonymously(getAuthClient());
     } catch (err) {
       setError(friendlyAuthError((err as Error).message));
       setBusy(false);
@@ -126,10 +141,22 @@ export default function LoginPage() {
               {mode === "signin" ? "Create an account" : "Sign in"}
             </button>
           </p>
+
+          <div className="border-border mt-4 border-t pt-4">
+            <Button
+              type="button"
+              variant="secondary"
+              className="w-full"
+              onClick={() => void tryDemo()}
+              disabled={busy}
+            >
+              Try the demo
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
-      <p className="text-muted text-xs">Demo mode is coming soon.</p>
+      <p className="text-muted text-xs">Demo data is not real — no account required.</p>
     </main>
   );
 }

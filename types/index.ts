@@ -140,6 +140,11 @@ export interface UserSettings {
   defaultCurrency: Currency;
   /** IANA timezone ids pinned to the dashboard world-clocks widget. */
   clocks?: string[];
+  /**
+   * Demo-mode only: the raw (exported) data-encryption key for an anonymous
+   * guest. Stored plaintext because demo data is non-sensitive and sandboxed.
+   */
+  demoDek?: string;
   /** PIN verification hash (PBKDF2), set once. */
   pinHash?: string;
   /** Salt used to derive the PIN KEK. */
