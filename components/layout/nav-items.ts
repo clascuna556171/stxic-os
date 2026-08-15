@@ -43,3 +43,14 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Habits", href: "/habits", icon: Repeat, feature: "habits" },
   { label: "Settings", href: "/settings", icon: Settings },
 ];
+
+/**
+ * Mobile bottom bar shows a few core items + a "More" sheet for the rest.
+ * Keep this to ≤4 (plus the More button) so labels stay readable at ~11px.
+ */
+export const PRIMARY_MOBILE_ITEMS: NavItem[] = [
+  { label: "Home", href: "/dashboard", icon: LayoutDashboard },
+  { label: "Notes", href: "/notes", icon: FileText, feature: "notes" },
+  { label: "Tasks", href: "/tasks", icon: ListTodo, feature: "tasks" },
+  { label: "Income", href: "/income", icon: CircleDollarSign, feature: "income" },
+];
