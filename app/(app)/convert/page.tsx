@@ -1,15 +1,17 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Copy, Download, FileText, FileUp, Save, X } from "lucide-react";
+import { Copy, Download, FileText, FileUp, Save, ScanText, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/toaster";
 import { convertFile, validateSize, type ConvertResult } from "@/lib/converter/convert";
 import { detectFormat, SUPPORTED_EXTENSIONS } from "@/lib/converter/formats";
+import { pdfPagesToDataUrls } from "@/lib/converter/ocr";
 import { textToNote } from "@/lib/converter/note";
 import { saveNote } from "@/lib/hydrate";
+import { isEnabled } from "@/lib/config/features";
 import { cn } from "@/lib/utils/cn";
 
 export default function ConvertPage() {
@@ -17,6 +19,8 @@ export default function ConvertPage() {
   const [result, setResult] = useState<ConvertResult | null>(null);
   const [processing, setProcessing] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [ocrBusy, setOcrBusy] = useState(false);
+  const [ocrProgress, setOcrProgress] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
   async function processFile(f: File) {
@@ -42,7 +46,10 @@ export default function ConvertPage() {
       if (res.empty) {
         toast({
           title: "No text found",
-          description: "This file has no extractable text (a scanned PDF?).",
+          description:
+            res.format === "pdf" && isEnabled("ocr")
+              ? "This looks like a scanned PDF — use Run OCR to extract the text."
+              : "This file has no extractable text (a scanned PDF?).",
         });
       }
     } catch (e) {
@@ -93,6 +100,43 @@ export default function ConvertPage() {
     a.download = `${file.name.replace(/\.[^.]+$/, "")}.${ext}`;
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  async function runOcr() {
+    if (!file) return;
+    setOcrBusy(true);
+    setOcrProgress(0);
+    try {
+      const pages = await pdfPagesToDataUrls(file);
+      if (pages.length === 0) throw new Error("Couldn't render any pages.");
+      let text = "";
+      for (let i = 0; i < pages.length; i++) {
+        setOcrProgress(i + 1);
+        const res = await fetch("/api/ocr", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ image: pages[i] }),
+        });
+        const json = (await res.json().catch(() => null)) as {
+          ok?: boolean;
+          data?: { text?: string };
+          error?: string;
+        } | null;
+        if (!json?.ok) throw new Error(json?.error || `Page ${i + 1} failed`);
+        text += `${json.data?.text ?? ""}\n\n`;
+      }
+      setOcrProgress(0);
+      setResult((r) => (r ? { ...r, text: text.trim(), empty: text.trim().length === 0 } : r));
+      toast({
+        title: "OCR complete",
+        description: `${pages.length} page${pages.length === 1 ? "" : "s"} extracted.`,
+        variant: "success",
+      });
+    } catch (err) {
+      toast({ title: "OCR failed", description: (err as Error).message, variant: "danger" });
+    } finally {
+      setOcrBusy(false);
+    }
   }
 
   return (
@@ -162,6 +206,21 @@ export default function ConvertPage() {
               </Button>
             </CardHeader>
             <CardContent className="flex flex-wrap gap-2">
+              {isEnabled("ocr") && result.empty && result.format === "pdf" ? (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => void runOcr()}
+                  disabled={ocrBusy}
+                >
+                  <ScanText />
+                  {ocrBusy
+                    ? ocrProgress > 0
+                      ? `OCR page ${ocrProgress}…`
+                      : "Preparing…"
+                    : "Run OCR (scanned PDF)"}
+                </Button>
+              ) : null}
               <Button
                 variant="primary"
                 size="sm"

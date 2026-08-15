@@ -8,12 +8,20 @@
 import type { AiProvider, ConcreteProvider } from "./types";
 
 export const GROQ_DEFAULT_MODEL = "llama-3.3-70b-versatile";
+export const GROQ_VISION_DEFAULT_MODEL = "llama-3.2-11b-vision-preview";
 export const OLLAMA_DEFAULT_MODEL = "qwen2.5-coder:1.5b";
 
 export function groqConfig() {
   return {
     apiKey: process.env.GROQ_API_KEY ?? "",
     model: process.env.GROQ_MODEL ?? GROQ_DEFAULT_MODEL,
+  };
+}
+
+export function groqVisionConfig() {
+  return {
+    apiKey: process.env.GROQ_API_KEY ?? "",
+    model: process.env.GROQ_VISION_MODEL ?? GROQ_VISION_DEFAULT_MODEL,
   };
 }
 

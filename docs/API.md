@@ -46,6 +46,7 @@ httpOnly cookie `stxic_session`.
 | POST | `/api/backup/export` | BACKUP | stub → use `exportBackup` (client-side encrypted) |
 | POST | `/api/backup/restore` | BACKUP | stub → use `restoreBackup` (client-side encrypted) |
 | POST | `/api/convert/file` | EXTRAS | stub → client-side `lib/converter` |
+| POST | `/api/ocr` | EXTRAS | live (Groq vision OCR of a page image) |
 
 > **Obsidian has NO server route** — live sync is client-side only
 > (`lib/obsidian/client.ts`), because the Next.js server cannot reach the

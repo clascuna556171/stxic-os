@@ -31,3 +31,5 @@
   pull steps); digest JSON consumed by dashboard card.
 - Study planner (`/study`): open tasks + hours/day + study days → 7-day
   schedule via `studyPlannerPrompt` (ephemeral, generated on demand).
+- OCR (`/api/ocr`, `lib/ai/ocr.ts`): scanned PDF pages → Groq vision
+  (`llama-3.2-11b-vision-preview`, `GROQ_VISION_MODEL`) → cleaned text.

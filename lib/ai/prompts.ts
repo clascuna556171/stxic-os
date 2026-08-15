@@ -74,6 +74,14 @@ export function badsDraftPrompt(ctx: { title: string; description: string }): st
   ].join("\n");
 }
 
-/** Reserved for the OCR feature (not yet implemented). */
-export const OCR_EXTRACT_PROMPT =
-  "You extract clean, readable text from OCR'd scanned documents, preserving structure.";
+/** OCR: turn a scanned page image into clean, structure-preserving text. */
+export function ocrExtractPrompt(): string {
+  return [
+    "You are an OCR engine for a scanned document page.",
+    "Extract ALL text from the image verbatim — every word, every number.",
+    "Preserve the original structure: paragraphs, bullet/numbered lists, headings, tables, and blank-line separation between blocks.",
+    "Do not summarize, comment, or add anything that is not in the image.",
+    "If the image has no readable text, reply with exactly: NO_TEXT",
+    "Output plain text only.",
+  ].join("\n");
+}
