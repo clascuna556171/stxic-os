@@ -20,7 +20,7 @@ export const features = {
   demo: true,
 
   // ── v1.5 Extras (flag-gated) ───────────────────────────────
-  news: false,
+  news: true,
   habits: false,
   ai: true,
   badsde: false,
@@ -29,7 +29,7 @@ export const features = {
   obsidianLive: false,
   semesterPlanner: false,
   dashboardGrid: false,
-  readingList: false,
+  readingList: true,
   ocr: false,
 } as const;
 

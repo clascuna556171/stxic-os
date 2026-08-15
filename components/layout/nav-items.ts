@@ -4,6 +4,7 @@ import {
   KeyRound,
   LayoutDashboard,
   ListTodo,
+  Newspaper,
   Settings,
   Sparkles,
   Timer,
@@ -31,5 +32,6 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Income", href: "/income", icon: CircleDollarSign, feature: "income" },
   { label: "Focus", href: "/focus", icon: Timer, feature: "focus" },
   { label: "AI chat", href: "/ai", icon: Sparkles, feature: "ai" },
+  { label: "News", href: "/news", icon: Newspaper, feature: "news" },
   { label: "Settings", href: "/settings", icon: Settings },
 ];

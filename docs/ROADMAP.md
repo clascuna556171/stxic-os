@@ -52,8 +52,8 @@
 - [x] **v1 release tag v1.0.0** 🎉
 
 ## 2. v1.5 Extras (flag-gated)
-- [ ] News hub: RSS aggregate + TL;DR + save to notes
-- [ ] Reading list (save for later → notes)
+- [x] News hub: RSS aggregate + TL;DR + save to notes
+- [x] Reading list (save for later → notes)
 - [x] AI chat (Groq streaming + Ollama local fallback)
 - [ ] AI daily digest on dashboard
 - [ ] AI study planner
