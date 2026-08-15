@@ -3,7 +3,7 @@
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
-import { CalendarRange, Sparkles } from "lucide-react";
+import { CalendarRange, RefreshCw, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -18,8 +18,9 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { toast } from "@/components/ui/toaster";
 import { aiChatOnce } from "@/lib/ai/client";
 import { plannerMessages } from "@/lib/ai/planner";
+import { syncBlackboard } from "@/lib/blackboard/sync";
 import { buildTermGrid, termItemsForWeek, type TermItem } from "@/lib/semester";
-import { getBlackboard, listTasks } from "@/lib/hydrate";
+import { getBlackboard, getSettings, listTasks } from "@/lib/hydrate";
 import { formatDate } from "@/lib/utils/dates";
 import { cn } from "@/lib/utils/cn";
 import type { BlackboardEvent, TaskItem } from "@/types";
@@ -49,6 +50,8 @@ export default function SemesterPage() {
   const [events, setEvents] = useState<BlackboardEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [now, setNow] = useState(0);
+  const [icalUrl, setIcalUrl] = useState("");
+  const [syncing, setSyncing] = useState(false);
   const [planFor, setPlanFor] = useState<{ label: string; items: TermItem[] } | null>(null);
   const [plan, setPlan] = useState("");
   const [generating, setGenerating] = useState(false);
@@ -56,10 +59,11 @@ export default function SemesterPage() {
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const [t, b] = await Promise.all([listTasks(), getBlackboard()]);
+      const [t, b, s] = await Promise.all([listTasks(), getBlackboard(), getSettings()]);
       if (cancelled) return;
       if (t.ok) setTasks(t.data);
       if (b.ok) setEvents(b.data.events);
+      if (s.ok) setIcalUrl(s.data.blackboard?.icalUrl ?? "");
       setNow(Date.now());
       setLoading(false);
     })();
@@ -67,6 +71,34 @@ export default function SemesterPage() {
       cancelled = true;
     };
   }, []);
+
+  async function sync() {
+    if (!icalUrl) {
+      toast({
+        title: "No Blackboard feed",
+        description: "Add your feed URL in Tasks → Blackboard, then sync here.",
+        variant: "danger",
+      });
+      return;
+    }
+    setSyncing(true);
+    try {
+      const res = await syncBlackboard(icalUrl);
+      setEvents(res.events);
+      setNow(Date.now());
+      toast({
+        title:
+          res.added > 0
+            ? `Synced ${res.added} new deadline${res.added === 1 ? "" : "s"}`
+            : "Already up to date",
+        variant: "success",
+      });
+    } catch (e) {
+      toast({ title: "Sync failed", description: (e as Error).message, variant: "danger" });
+    } finally {
+      setSyncing(false);
+    }
+  }
 
   const weeks = useMemo(() => (now ? buildTermGrid(now) : []), [now]);
 
@@ -103,9 +135,25 @@ export default function SemesterPage() {
             Your term at a glance — Blackboard deadlines plus your own tasks.
           </p>
         </div>
-        <Link href="/study" className="text-muted hover:text-foreground text-xs transition-colors">
-          Open study planner
-        </Link>
+        <div className="flex items-center gap-3">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => void sync()}
+            disabled={syncing || loading}
+          >
+            <RefreshCw
+              className={syncing ? "animate-spin motion-reduce:animate-none" : undefined}
+            />
+            Sync Blackboard
+          </Button>
+          <Link
+            href="/study"
+            className="text-muted hover:text-foreground text-xs transition-colors"
+          >
+            Open study planner
+          </Link>
+        </div>
       </header>
 
       {loading ? (

@@ -67,10 +67,22 @@ export function BlackboardPanel({ onSynced }: { onSynced: () => void }) {
   }
 
   async function runSync() {
-    if (!savedUrl || syncing) return;
+    if (syncing) return;
+    const url = icalUrl.trim() || savedUrl;
+    if (!url) {
+      setEditing(true);
+      toast({ title: "Add your Blackboard feed URL first" });
+      return;
+    }
     setSyncing(true);
     try {
-      const res = await syncBlackboard(savedUrl);
+      if (url !== savedUrl) {
+        const saved = await saveSettings({ blackboard: { icalUrl: url } });
+        if (!saved.ok) throw new Error(saved.error);
+        setSavedUrl(url);
+        setEditing(false);
+      }
+      const res = await syncBlackboard(url);
       setEvents(res.events);
       setLastSync(res.lastSync);
       setNow(Date.now());
@@ -98,14 +110,15 @@ export function BlackboardPanel({ onSynced }: { onSynced: () => void }) {
           <CardTitle>Blackboard</CardTitle>
           <CardDescription>UM Blackboard deadlines, synced from your iCal feed.</CardDescription>
         </div>
-        {savedUrl && !editing ? (
-          <Button variant="secondary" size="sm" onClick={() => void runSync()} disabled={syncing}>
-            <RefreshCw
-              className={syncing ? "animate-spin motion-reduce:animate-none" : undefined}
-            />
-            Sync now
-          </Button>
-        ) : null}
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => void runSync()}
+          disabled={syncing || loading}
+        >
+          <RefreshCw className={syncing ? "animate-spin motion-reduce:animate-none" : undefined} />
+          Sync now
+        </Button>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         {loading ? (
