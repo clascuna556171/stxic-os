@@ -51,9 +51,14 @@ describe("compact", () => {
 });
 
 describe("defaultLayout", () => {
-  it("contains every registered widget with sane bounds", () => {
+  it("contains every non-opt-in widget with sane bounds", () => {
     const layout = defaultLayout();
-    expect(layout.map((w) => w.id).sort()).toEqual(WIDGETS.map((w) => w.id).sort());
+    const optIn = new Set(["obsidianGraph"]);
+    expect(layout.map((w) => w.id).sort()).toEqual(
+      WIDGETS.map((w) => w.id)
+        .filter((id) => !optIn.has(id))
+        .sort(),
+    );
     for (const w of layout) {
       expect(w.w).toBeGreaterThanOrEqual(1);
       expect(w.w).toBeLessThanOrEqual(GRID_COLS);

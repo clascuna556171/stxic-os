@@ -24,6 +24,11 @@ const IncomeChart = dynamic(
   { ssr: false },
 );
 
+const ObsidianGraphWidget = dynamic(
+  () => import("@/components/features/obsidian/obsidian-graph").then((m) => m.ObsidianGraphWidget),
+  { ssr: false },
+);
+
 export interface DashboardData {
   tasks: TaskItem[];
   habits: Habit[];
@@ -189,6 +194,20 @@ export function WidgetBody({ id, data }: { id: string; data: DashboardData }) {
         </Card>
       );
     }
+    case "obsidianGraph":
+      return (
+        <Card className="flex h-full flex-col">
+          <CardHeader className="flex-row items-center justify-between">
+            <CardTitle>Obsidian graph</CardTitle>
+            <Link href="/settings" className="text-muted hover:text-foreground text-xs">
+              Settings
+            </Link>
+          </CardHeader>
+          <CardContent className="min-h-0 flex-1">
+            <ObsidianGraphWidget />
+          </CardContent>
+        </Card>
+      );
     default:
       return null;
   }

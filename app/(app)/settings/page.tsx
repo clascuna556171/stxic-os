@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plug } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -12,10 +11,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { useTheme } from "@/components/theme/theme-provider";
 import { useAuth } from "@/components/auth/auth-provider";
 import { BackupCard } from "@/components/features/backup/backup-card";
+import { ObsidianSettingsCard } from "@/components/features/obsidian/obsidian-settings-card";
 import { PRESET_LIST, hexToHue, hueToHex } from "@/lib/theme";
 import { getSettings, saveSettings } from "@/lib/hydrate";
 import { cn } from "@/lib/utils/cn";
@@ -140,18 +139,7 @@ export default function SettingsPage() {
 
       <BackupCard disabled={demo} />
 
-      <Card className="opacity-70">
-        <CardHeader className="flex-row items-center justify-between">
-          <div>
-            <CardTitle>Obsidian sync</CardTitle>
-            <CardDescription>Live two-way bridge with your local vault.</CardDescription>
-          </div>
-          <Badge variant="muted">
-            <Plug className="size-3.5" />
-            Coming soon
-          </Badge>
-        </CardHeader>
-      </Card>
+      <ObsidianSettingsCard disabled={demo} />
     </div>
   );
 }

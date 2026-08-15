@@ -2,7 +2,16 @@
 
 import { useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { ArrowLeft, Columns2, Download, Eye, PenLine, Star, Trash2 } from "lucide-react";
+import {
+  ArrowLeft,
+  Columns2,
+  Download,
+  Eye,
+  PenLine,
+  Star,
+  Trash2,
+  UploadCloud,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,7 +19,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/toaster";
 import { saveNote } from "@/lib/hydrate";
-import { slugify } from "@/lib/notes";
+import { downloadObsidianNote } from "@/lib/obsidian/export";
 import { cn } from "@/lib/utils/cn";
 import type { Note } from "@/types";
 
@@ -24,19 +33,27 @@ type ViewMode = "write" | "preview" | "split";
 interface NoteEditorProps {
   note: Note;
   folders: string[];
+  notes: Note[];
   onBack: () => void;
   onSaved: (n: Note) => void;
   onDelete: (id: string) => void;
   onToggleFavorite: (n: Note) => void;
+  onNavigate: (id: string) => void;
+  onPushToObsidian?: (n: Note) => void;
+  obsidianConnected?: boolean;
 }
 
 export function NoteEditor({
   note,
   folders,
+  notes,
   onBack,
   onSaved,
   onDelete,
   onToggleFavorite,
+  onNavigate,
+  onPushToObsidian,
+  obsidianConnected,
 }: NoteEditorProps) {
   const [title, setTitle] = useState(note.title);
   const [content, setContent] = useState(note.content);
@@ -59,10 +76,9 @@ export function NoteEditor({
     timer.current = setTimeout(() => void persist(), 1000);
   }
 
-  async function persist() {
-    setSaveState("saving");
+  function buildNote(): Note {
     const d = draft.current;
-    const updated: Note = {
+    return {
       ...note,
       title: d.title.trim() || "Untitled",
       content: d.content,
@@ -73,6 +89,11 @@ export function NoteEditor({
         .filter(Boolean),
       updatedAt: Date.now(),
     };
+  }
+
+  async function persist() {
+    setSaveState("saving");
+    const updated = buildNote();
     const res = await saveNote(updated);
     if (res.ok) {
       setSaveState("saved");
@@ -84,16 +105,7 @@ export function NoteEditor({
   }
 
   function exportMarkdown() {
-    const body = `# ${draft.current.title.trim() || "Untitled"}\n\n${draft.current.content}`;
-    const blob = new Blob([body], { type: "text/markdown;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${slugify(draft.current.title)}.md`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    downloadObsidianNote(buildNote());
   }
 
   const savedLabel =
@@ -115,6 +127,17 @@ export function NoteEditor({
           <span className={cn("text-muted text-xs", saveState === "dirty" && "text-warning")}>
             {savedLabel}
           </span>
+          {onPushToObsidian ? (
+            <span
+              className={cn(
+                "flex items-center gap-1 text-xs",
+                obsidianConnected ? "text-success" : "text-muted",
+              )}
+            >
+              <span className="size-1.5 rounded-full bg-current" aria-hidden />
+              {obsidianConnected ? "Obsidian" : "Offline"}
+            </span>
+          ) : null}
         </div>
         <div className="flex items-center gap-1">
           <Button
@@ -125,11 +148,21 @@ export function NoteEditor({
           >
             <Star className={cn("size-4", note.favorite && "text-accent fill-current")} />
           </Button>
+          {onPushToObsidian ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onPushToObsidian(buildNote())}
+              aria-label="Save to Obsidian"
+            >
+              <UploadCloud />
+            </Button>
+          ) : null}
           <Button
             variant="ghost"
             size="icon"
             onClick={exportMarkdown}
-            aria-label="Export as Markdown"
+            aria-label="Export to Obsidian (.md)"
           >
             <Download />
           </Button>
@@ -227,7 +260,11 @@ export function NoteEditor({
           ) : null}
           {view !== "write" ? (
             <div className="border-border bg-surface rounded-lg border p-4">
-              <MarkdownPreview content={content || "*Nothing to preview yet.*"} />
+              <MarkdownPreview
+                content={content || "*Nothing to preview yet.*"}
+                notes={notes}
+                onNavigate={onNavigate}
+              />
             </div>
           ) : null}
         </div>

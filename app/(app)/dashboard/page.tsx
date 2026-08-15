@@ -13,6 +13,7 @@ import {
 import { DashboardGrid } from "@/components/features/dashboard/grid";
 import { WidgetBody } from "@/components/features/dashboard/widget-body";
 import { WIDGETS, defaultLayout } from "@/lib/dashboard/widgets";
+import { isEnabled } from "@/lib/config/features";
 import {
   getSettings,
   listFocusSessions,
@@ -92,7 +93,10 @@ export default function DashboardPage() {
   }
 
   const hidden = useMemo(
-    () => WIDGETS.filter((w) => !widgets.some((x) => x.id === w.id)),
+    () =>
+      WIDGETS.filter((w) => !widgets.some((x) => x.id === w.id)).filter(
+        (w) => w.id !== "obsidianGraph" || isEnabled("obsidianLive"),
+      ),
     [widgets],
   );
 
@@ -135,7 +139,9 @@ export default function DashboardPage() {
         </div>
       ) : (
         <DashboardGrid
-          widgets={widgets}
+          widgets={
+            isEnabled("obsidianLive") ? widgets : widgets.filter((w) => w.id !== "obsidianGraph")
+          }
           onChange={changeLayout}
           onHide={hideWidget}
           renderWidget={(id) => <WidgetBody id={id} data={data} />}

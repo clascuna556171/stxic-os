@@ -162,6 +162,42 @@ body {
   text-decoration: underline;
   text-underline-offset: 2px;
 }
+.markdown-body .wikilink-chip,
+.markdown-body .hashtag-pill {
+  appearance: none;
+  cursor: pointer;
+  font: inherit;
+  line-height: 1.4;
+  border-radius: 999px;
+  padding: 0.02em 0.55em;
+  margin: 0 0.1em;
+  vertical-align: baseline;
+  transition: background-color 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.markdown-body .wikilink-chip {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+}
+.markdown-body .wikilink-chip:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+}
+.markdown-body .wikilink-chip.is-missing {
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px dashed var(--border);
+  cursor: default;
+  opacity: 0.8;
+}
+.markdown-body .hashtag-pill {
+  color: var(--text-muted);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  font-size: 0.85em;
+}
+.markdown-body .hashtag-pill:hover {
+  color: var(--text);
+}
 .markdown-body ul,
 .markdown-body ol {
   margin: 0.75em 0;

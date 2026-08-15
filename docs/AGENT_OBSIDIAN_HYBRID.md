@@ -144,3 +144,18 @@ export type ObsidianClient = {
   matching notes; confirm dialog shows changes before overwrite; key stored
   encrypted, never logged; cert-untrusted + connection-refused copy shown
   correctly; build + lint pass.
+- `lib/obsidian/client.ts` REST client (getStatus, listDirectory, readNote,
+  writeNote, appendNote, deleteNote, search) with Bearer auth, encoded paths,
+  and categorized errors (`connection-refused` / `unauthorized` /
+  `not-found` / `rate` / `unknown`). Unit-tested against a stubbed fetch.
+- Settings panel (`components/features/obsidian/obsidian-settings-card.tsx`):
+  enable toggle, base URL, HTTP fallback, API-key password field, Test
+  Connection, read-only MCP config with Copy button. Key persisted AES-GCM
+  via `saveObsidianConfig`.
+- Push/Pull (`lib/obsidian/sync.ts`) + vault browser
+  (`components/features/obsidian/vault-browser.tsx`) wired into Notes:
+  push to `Stxic/{folder}/{slug}.md`, pull with `stxic_id` matching + change
+  confirm dialog, Connected/Offline pill, demo-mode disabled.
+- Cert-trust + setup guide at `docs/OBSIDIAN_SETUP.md`. Vault graph widget on
+  the dashboard (`components/features/obsidian/obsidian-graph.tsx`).
+- Feature flags `obsidian` + `obsidianLive` → `true`.

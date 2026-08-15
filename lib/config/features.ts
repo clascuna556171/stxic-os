@@ -26,12 +26,12 @@ export const features = {
   studyPlanner: true,
   badsde: true,
   convert: true,
-  obsidian: false,
-  obsidianLive: false,
+  obsidian: true,
+  obsidianLive: true,
   semesterPlanner: true,
   dashboardGrid: true,
   readingList: true,
-  ocr: false,
+  ocr: true,
 } as const;
 
 export type FeatureKey = keyof typeof features;

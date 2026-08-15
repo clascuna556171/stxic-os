@@ -51,5 +51,13 @@ two-way bridge is a separate feature — see `AGENT_OBSIDIAN_HYBRID.md`.
   dynamic-imported parsers (pdfjs-dist, mammoth, exceljs, papaparse) with a
   25 MB size guard; output saves as a note in "Converted", copy, or
   download .txt/.md. Scanned-PDF "no text" hint shown.
-- Remaining (Obsidian, reading-list edge cases, semester planner, dashboard
-  grid, OCR) still pending behind flags.
+- Obsidian format compatibility (`lib/obsidian/format.ts`): export any note
+  to Obsidian `.md` (frontmatter `title/tags/created/stxic_id`,
+  `[[wikilinks]]`, `#tags`); import a vault folder (webkitdirectory) or `.md`
+  files → notes (folders preserved); `[[wikilinks]]` render as clickable chips
+  and `#tags` as pills in the markdown preview.
+- AI OCR for scanned PDFs (`lib/converter/ocr.ts` + `app/api/ocr`): when a PDF
+  yields no text, the converter shows "Run OCR" — renders up to 20 pages to
+  JPEG and extracts text via Groq vision (`GROQ_VISION_MODEL`). Result saves
+  as a note like any conversion.
+- Remaining (reading-list edge cases) still pending behind flags.

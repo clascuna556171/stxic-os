@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { FileText, Plus, Star } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { FileText, FolderDown, FolderUp, Plug, Plus, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -15,8 +15,13 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/toaster";
 import { NoteEditor } from "@/components/features/notes/note-editor";
+import { useObsidianBridge } from "@/components/features/obsidian/use-obsidian-bridge";
+import { VaultBrowser } from "@/components/features/obsidian/vault-browser";
 import { NOTE_TEMPLATES, newNoteFromTemplate, noteFolders, type NoteTemplate } from "@/lib/notes";
 import { deleteNote, listNotes, saveNote } from "@/lib/hydrate";
+import { buildNoteFromImport, importObsidianVault } from "@/lib/obsidian/format";
+import { downloadObsidianNotes } from "@/lib/obsidian/export";
+import { isEnabled } from "@/lib/config/features";
 import { relativeTime } from "@/lib/utils/dates";
 import { cn } from "@/lib/utils/cn";
 import type { Note } from "@/types";
@@ -33,6 +38,11 @@ export default function NotesPage() {
   const [folder, setFolder] = useState("all");
   const [activeId, setActiveId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<Note | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [vaultOpen, setVaultOpen] = useState(false);
+  const importRef = useRef<HTMLInputElement | null>(null);
+  const bridge = useObsidianBridge();
+  const obsidianLive = isEnabled("obsidianLive");
 
   useEffect(() => {
     let cancelled = false;
@@ -42,6 +52,8 @@ export default function NotesPage() {
       if (res.ok) {
         setNotes(res.data);
         setError("");
+        const open = new URLSearchParams(window.location.search).get("open");
+        if (open) setActiveId(open);
       } else {
         setError(res.error);
       }
@@ -86,6 +98,58 @@ export default function NotesPage() {
     });
   }
 
+  async function onImportFiles(files: FileList) {
+    setImporting(true);
+    try {
+      const parsed = await importObsidianVault(Array.from(files));
+      if (parsed.length === 0) {
+        toast({
+          title: "No Markdown files",
+          description: "Pick an Obsidian vault folder containing .md files.",
+          variant: "danger",
+        });
+        return;
+      }
+      const existingById = new Map(notes.map((n) => [n.id, n]));
+      let created = 0;
+      let updated = 0;
+      for (const p of parsed) {
+        const existing = p.stxicId ? existingById.get(p.stxicId) : undefined;
+        const note = buildNoteFromImport(p, existing);
+        const res = await saveNote(note);
+        if (!res.ok) continue;
+        if (existing) updated++;
+        else created++;
+        existingById.set(note.id, note);
+      }
+      setNotes([...existingById.values()]);
+      toast({
+        title: "Vault imported",
+        description: `${created} new · ${updated} updated`,
+        variant: "success",
+      });
+    } catch (err) {
+      toast({ title: "Import failed", description: (err as Error).message, variant: "danger" });
+    } finally {
+      setImporting(false);
+    }
+  }
+
+  function exportAll() {
+    if (notes.length === 0) {
+      toast({ title: "Nothing to export", description: "Create a note first." });
+      return;
+    }
+    downloadObsidianNotes(notes);
+    toast({ title: "Exporting notes", description: `${notes.length} .md files downloading.` });
+  }
+
+  async function pushToObsidian(note: Note) {
+    const res = await bridge.pushNote(note);
+    if (res.ok) toast({ title: "Saved to Obsidian", variant: "success" });
+    else toast({ title: "Push failed", description: res.error.message, variant: "danger" });
+  }
+
   async function confirmDelete() {
     if (!deleting) return;
     const res = await deleteNote(deleting.id);
@@ -108,11 +172,43 @@ export default function NotesPage() {
             {notes.length} note{notes.length === 1 ? "" : "s"} · autosaves as you type
           </p>
         </div>
-        <Button variant="primary" onClick={() => createNote(NOTE_TEMPLATES[0]!)}>
-          <Plus />
-          New note
-        </Button>
+        <div className="flex items-center gap-2">
+          {obsidianLive ? (
+            <Button variant="secondary" onClick={() => setVaultOpen(true)}>
+              <Plug />
+              Obsidian
+            </Button>
+          ) : null}
+          <Button
+            variant="secondary"
+            onClick={() => importRef.current?.click()}
+            disabled={importing}
+          >
+            <FolderUp />
+            {importing ? "Importing…" : "Import vault"}
+          </Button>
+          <Button variant="secondary" onClick={exportAll}>
+            <FolderDown />
+            Export all
+          </Button>
+          <Button variant="primary" onClick={() => createNote(NOTE_TEMPLATES[0]!)}>
+            <Plus />
+            New note
+          </Button>
+        </div>
       </header>
+
+      <input
+        ref={importRef}
+        type="file"
+        accept=".md"
+        className="hidden"
+        {...({ webkitdirectory: "" } as unknown as React.InputHTMLAttributes<HTMLInputElement>)}
+        onChange={(e) => {
+          if (e.target.files?.length) void onImportFiles(e.target.files);
+          e.target.value = "";
+        }}
+      />
 
       <div className="border-border flex min-h-0 flex-1 overflow-hidden rounded-xl border">
         <aside
@@ -207,10 +303,14 @@ export default function NotesPage() {
               key={active.id}
               note={active}
               folders={folders}
+              notes={notes}
               onBack={() => setActiveId(null)}
               onSaved={onSaved}
               onDelete={(id) => setDeleting(notes.find((n) => n.id === id) ?? null)}
               onToggleFavorite={onToggleFavorite}
+              onNavigate={setActiveId}
+              onPushToObsidian={obsidianLive ? pushToObsidian : undefined}
+              obsidianConnected={bridge.connected}
             />
           ) : error ? (
             <div className="flex flex-1 items-center justify-center p-6">
@@ -261,6 +361,18 @@ export default function NotesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {obsidianLive ? (
+        <VaultBrowser
+          open={vaultOpen}
+          onOpenChange={setVaultOpen}
+          bridge={bridge}
+          notes={notes}
+          onNotesChanged={setNotes}
+          activeNote={active}
+          onOpenNote={setActiveId}
+        />
+      ) : null}
     </div>
   );
 }

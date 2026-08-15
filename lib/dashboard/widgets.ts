@@ -6,7 +6,8 @@
 import { compact } from "./grid";
 import type { DashboardWidget } from "@/types";
 
-export type WidgetId = "digest" | "tasks" | "focus" | "clocks" | "fx" | "income" | "habits";
+export type WidgetId =
+  "digest" | "tasks" | "focus" | "clocks" | "fx" | "income" | "habits" | "obsidianGraph";
 
 export interface WidgetDef {
   id: WidgetId;
@@ -30,6 +31,13 @@ export const WIDGETS: WidgetDef[] = [
   { id: "fx", title: "FX converter", description: "Live currency rates", minW: 3, minH: 3 },
   { id: "income", title: "Income", description: "Monthly totals", minW: 6, minH: 3 },
   { id: "habits", title: "Habits", description: "Streaks at a glance", minW: 4, minH: 2 },
+  {
+    id: "obsidianGraph",
+    title: "Obsidian graph",
+    description: "Your vault as a graph",
+    minW: 5,
+    minH: 4,
+  },
 ];
 
 export const WIDGET_BY_ID: Record<WidgetId, WidgetDef> = Object.fromEntries(
