@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "@/components/ui/toaster";
 import { listFocusSessions, listTasks, saveFocusSession } from "@/lib/hydrate";
+import { sendAppNotification } from "@/lib/push/notify";
 import {
   DEFAULT_DURATIONS,
   FOCUS_PRESETS,
@@ -81,6 +82,11 @@ export default function FocusPage() {
         sessionsRef.current = [...sessionsRef.current, session];
         setStat(weeklyFocusStat(sessionsRef.current));
         toast({ title: "Focus session logged", variant: "success" });
+        void sendAppNotification({
+          title: "Focus complete",
+          body: `${formatDuration(duration)} of focused time. Nice work.`,
+          url: "/focus",
+        });
       } else {
         toast({ title: "Couldn't log session", description: res.error, variant: "danger" });
       }

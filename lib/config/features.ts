@@ -36,7 +36,7 @@ export const features = {
   // ── v2 (flag-gated) ─────────────────────────────────────────
   publish: true,
   biometric: true,
-  push: false,
+  push: true,
 } as const;
 
 export type FeatureKey = keyof typeof features;

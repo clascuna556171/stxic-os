@@ -26,9 +26,11 @@ import {
 } from "firebase-admin/app";
 import { getAuth, type Auth } from "firebase-admin/auth";
 import { getFirestore, type Firestore } from "firebase-admin/firestore";
+import { getMessaging, type Messaging } from "firebase-admin/messaging";
 
 let authInstance: Auth | undefined;
 let dbInstance: Firestore | undefined;
+let messagingInstance: Messaging | undefined;
 let emulatorCred: Credential | undefined;
 
 /**
@@ -86,4 +88,9 @@ export function getAdminAuth(): Auth {
 export function getAdminDb(): Firestore {
   if (!dbInstance) dbInstance = getFirestore(getAdminApp());
   return dbInstance;
+}
+
+export function getAdminMessaging(): Messaging {
+  if (!messagingInstance) messagingInstance = getMessaging(getAdminApp());
+  return messagingInstance;
 }
