@@ -31,6 +31,14 @@
 - Uses hydrate for writes; UI via `components/ui/*`.
 
 ## Done
-- Export produces valid .stxbak that restores on a fresh login; demo mode
-  opens sandboxed sample data with banner; demo cannot touch real data;
-  routes registered in FILE 8.
+- `.stxbak` export/restore works client-side (single encrypted JSON envelope
+  `{ manifest, salt, ciphertext }`, AES-GCM sealed with the master password via
+  `lib/auth/crypto#deriveBackupKey`). Restore previews counts and upserts each
+  collection through hydrate (re-sealed under the live DEK); settings restore
+  is selective (never overwrites PIN hash/salt, wrapped DEKs, or Obsidian key).
+- Demo mode: "Try the demo" → anonymous sign-in → auto-unlocked with a
+  persisted random demo DEK (`settings.demoDek`), seeded sample
+  vault/notes/tasks/income/habits + 2 weeks of focus stats; "Demo data — not
+  real" banner with "Start fresh"; backup disabled for guests.
+- `POST /api/backup/export|restore` remain stubs — backup is client-side
+  (the server has no DEK/master password); noted in `docs/API.md`.

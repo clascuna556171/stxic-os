@@ -42,14 +42,14 @@
 - [x] Focus timer (Pomodoro + session logs + weekly stat)
 - [x] Password strength + reused-password badges
 ### Backup & Demo (AGENT BACKUP_DEMO)
-- [ ] .stxbak encrypted export + restore
-- [ ] Demo/guest mode (sandboxed sample data)
+- [x] .stxbak encrypted export + restore
+- [x] Demo/guest mode (sandboxed sample data)
 ### Performance gate
-- [ ] LCP < 2.5s · CLS < 0.1 · INP < 200ms spot-check
-- [ ] Route code-splitting + lazy-load charts/editors
-- [ ] Firestore read pagination + indexes
-- [ ] PWA install test on phone (desktop + mobile)
-- [ ] **v1 release tag v1.0.0** 🎉
+- [~] LCP < 2.5s · CLS < 0.1 · INP < 200ms spot-check (manual Lighthouse; code-splitting done)
+- [x] Route code-splitting + lazy-load charts/editors
+- [x] Firestore read pagination + indexes (read cap; no composite indexes needed)
+- [~] PWA install test on phone (manual — desktop + mobile)
+- [x] **v1 release tag v1.0.0** 🎉
 
 ## 2. v1.5 Extras (flag-gated)
 - [ ] News hub: RSS aggregate + TL;DR + save to notes

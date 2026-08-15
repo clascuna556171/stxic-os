@@ -1,19 +1,41 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
 import { CalendarDays, Kanban, ListTodo, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/toaster";
-import { KanbanBoard } from "@/components/features/tasks/kanban-board";
-import { CalendarView } from "@/components/features/tasks/calendar-view";
 import { TaskDialog } from "@/components/features/tasks/task-dialog";
 import { deleteTask, listTasks, saveTask } from "@/lib/hydrate";
 import { cn } from "@/lib/utils/cn";
 import type { TaskItem, TaskStatus } from "@/types";
 
 const PRIORITY_ORDER = { P0: 0, P1: 1, P2: 2 } as const;
+
+function ViewSkeleton() {
+  return (
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+      {Array.from({ length: 3 }).map((_, i) => (
+        <div key={i} className="space-y-2">
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-40 w-full" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+const KanbanBoard = dynamic(
+  () => import("@/components/features/tasks/kanban-board").then((m) => m.KanbanBoard),
+  { ssr: false, loading: () => <ViewSkeleton /> },
+);
+
+const CalendarView = dynamic(
+  () => import("@/components/features/tasks/calendar-view").then((m) => m.CalendarView),
+  { ssr: false, loading: () => <ViewSkeleton /> },
+);
 
 export default function TasksPage() {
   const [tasks, setTasks] = useState<TaskItem[]>([]);

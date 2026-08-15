@@ -9,7 +9,16 @@
  * `{ ok: false, error: "Session locked" }`.
  */
 
-import { collection, doc, getDoc, getDocs, setDoc, deleteDoc, query } from "firebase/firestore";
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  setDoc,
+  deleteDoc,
+  query,
+  limit,
+} from "firebase/firestore";
 import { getAuthClient, getDb } from "@/lib/firebase/client";
 import { getSessionKey } from "@/lib/auth/key-holder";
 import { decryptString, encryptString } from "@/lib/auth/crypto";
@@ -29,6 +38,14 @@ import type {
 } from "@/types";
 
 const SETTINGS_DOC = "settings/main";
+
+/**
+ * Cap on the number of docs read per encrypted collection. Personal-scale
+ * data rarely exceeds this; full pagination/infinite-scroll is a future task.
+ * Single-field own-uid subcollection reads are auto-indexed — no composite
+ * indexes are required.
+ */
+const READ_LIMIT = 500;
 
 export const DEFAULT_SETTINGS: UserSettings = {
   themePreset: "stxc",
@@ -60,7 +77,9 @@ async function readEncrypted<T>(name: string): Promise<Envelope<T[]>> {
   const key = getSessionKey();
   if (!key) return { ok: false, error: "Session locked" };
   try {
-    const snap = await getDocs(query(collection(getDb(), `users/${uid}/${name}`)));
+    const snap = await getDocs(
+      query(collection(getDb(), `users/${uid}/${name}`), limit(READ_LIMIT)),
+    );
     const items: T[] = [];
     for (const d of snap.docs) {
       const cipher = d.data()?.["cipher"];
