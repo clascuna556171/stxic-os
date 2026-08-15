@@ -178,6 +178,15 @@ export async function unwrapDek(
   return decryptString(kek, wrapped);
 }
 
+/**
+ * Derive the backup-encryption key from the master password (AUTH contract —
+ * `exportBackupKey` / `restoreBackupKey`). PBKDF2 → AES-GCM, non-extractable.
+ * Used by the BACKUP agent (`lib/backup/`) to seal `.stxbak` files.
+ */
+export async function deriveBackupKey(masterPassword: string, salt: string): Promise<CryptoKey> {
+  return deriveKey(masterPassword, salt, PBKDF2_ITERATIONS);
+}
+
 /** True when `wrapped` is a well-formed `${iv}:${ciphertext}` payload. */
 export function isWrappedDek(wrapped: string): boolean {
   const parts = wrapped.split(":");

@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useTheme } from "@/components/theme/theme-provider";
+import { BackupCard } from "@/components/features/backup/backup-card";
 import { PRESET_LIST, hexToHue, hueToHex } from "@/lib/theme";
 import { getSettings, saveSettings } from "@/lib/hydrate";
 import { cn } from "@/lib/utils/cn";
@@ -134,6 +135,8 @@ export default function SettingsPage() {
           </div>
         </CardContent>
       </Card>
+
+      <BackupCard />
 
       <Card className="opacity-70">
         <CardHeader className="flex-row items-center justify-between">

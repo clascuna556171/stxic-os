@@ -43,8 +43,8 @@ httpOnly cookie `stxic_session`.
 | POST | `/api/badsde/draft` | BADS-DE | stub |
 | GET | `/api/fx/rate?base=USD&quote=PHP` | CORE | live (1h cache) |
 | POST | `/api/focus/session` | CORE | stub → use `saveFocusSession` (client-side encrypted) |
-| POST | `/api/backup/export` | BACKUP | stub |
-| POST | `/api/backup/restore` | BACKUP | stub |
+| POST | `/api/backup/export` | BACKUP | stub → use `exportBackup` (client-side encrypted) |
+| POST | `/api/backup/restore` | BACKUP | stub → use `restoreBackup` (client-side encrypted) |
 | POST | `/api/convert/file` | EXTRAS | stub (client-side fallback) |
 
 > **Obsidian has NO server route** — live sync is client-side only
