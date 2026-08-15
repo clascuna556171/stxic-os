@@ -44,6 +44,9 @@ two-way bridge is a separate feature — see `AGENT_OBSIDIAN_HYBRID.md`.
 - Uses `lib/hydrate.ts`; all flag-gated.
 
 ## Done
-- ≥6 formats convert in a worker (progress + size guard); output saves as a
-  note; note→md→import round-trip works; `[[links]]`+`#tags` render; reading
-  list + semester planner + dashboard grid functional behind flags.
+- File→text converter (`/convert`): ≥6 formats convert client-side via
+  dynamic-imported parsers (pdfjs-dist, mammoth, exceljs, papaparse) with a
+  25 MB size guard; output saves as a note in "Converted", copy, or
+  download .txt/.md. Scanned-PDF "no text" hint shown.
+- Remaining (Obsidian, reading-list edge cases, semester planner, dashboard
+  grid, OCR) still pending behind flags.

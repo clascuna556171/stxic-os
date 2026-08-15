@@ -59,7 +59,7 @@
 - [x] AI study planner
 - [ ] BADS-DE: iCal sync + drafts + risk pill + Google Calendar
 - [x] Habit tracker (streaks + AI nudges)
-- [ ] File→text converter (PDF/DOCX/TXT/MD/CSV/XLSX/HTML)
+- [x] File→text converter (PDF/DOCX/TXT/MD/CSV/XLSX/HTML)
 - [ ] Obsidian format: export + vault import + wikilinks render
 - [ ] Obsidian LIVE hybrid (Local REST API + MCP): Settings panel + Test Connection
 - [ ] Obsidian LIVE hybrid: `lib/obsidian/client.ts` REST client (client-side)

@@ -25,7 +25,7 @@ export const features = {
   ai: true,
   studyPlanner: true,
   badsde: false,
-  convert: false,
+  convert: true,
   obsidian: false,
   obsidianLive: false,
   semesterPlanner: false,

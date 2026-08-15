@@ -2,6 +2,7 @@ import {
   CalendarDays,
   CircleDollarSign,
   FileText,
+  FileUp,
   KeyRound,
   LayoutDashboard,
   ListTodo,
@@ -36,6 +37,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "AI chat", href: "/ai", icon: Sparkles, feature: "ai" },
   { label: "Study", href: "/study", icon: CalendarDays, feature: "studyPlanner" },
   { label: "News", href: "/news", icon: Newspaper, feature: "news" },
+  { label: "Convert", href: "/convert", icon: FileUp, feature: "convert" },
   { label: "Habits", href: "/habits", icon: Repeat, feature: "habits" },
   { label: "Settings", href: "/settings", icon: Settings },
 ];
