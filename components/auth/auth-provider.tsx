@@ -27,6 +27,8 @@ interface AuthState {
   locked: boolean;
   /** True when the signed-in user is an anonymous demo guest. */
   demo: boolean;
+  /** Set when establishing the server session fails (never a silent hang). */
+  error: string;
   autoLockMin: number;
   unlock: (key: CryptoKey) => void;
   lock: () => void;
@@ -58,6 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [sessionReady, setSessionReady] = useState(false);
   const [locked, setLocked] = useState(false);
   const [demo, setDemo] = useState(false);
+  const [error, setError] = useState("");
   const [autoLockMin, setAutoLockMin] = useState(5);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -111,7 +114,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (u) {
         try {
           const token = await u.getIdToken();
-          await establishSession(token);
+          const session = await establishSession(token);
+          if (!session.ok) throw new Error(session.error ?? "Couldn't establish your session");
+          setError("");
           const settings = await getSettings();
           if (settings.ok && settings.data.autoLockMin) {
             setAutoLockMin(settings.data.autoLockMin);
@@ -127,13 +132,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setDemo(false);
             setLocked(true);
           }
-        } catch {
+        } catch (e) {
+          setError((e as Error).message);
           setLocked(true);
         }
       } else {
         clearSessionKey();
         setLocked(false);
         setDemo(false);
+        setError("");
         void endSession();
       }
       setSessionReady(true);
@@ -161,6 +168,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       sessionReady,
       locked,
       demo,
+      error,
       autoLockMin,
       unlock,
       lock,
@@ -173,6 +181,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       sessionReady,
       locked,
       demo,
+      error,
       autoLockMin,
       unlock,
       lock,

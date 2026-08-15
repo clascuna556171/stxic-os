@@ -7,6 +7,7 @@ import {
   signInAnonymously,
   signInWithEmailAndPassword,
 } from "firebase/auth";
+import { RefreshCw } from "lucide-react";
 import { getAuthClient } from "@/lib/firebase/client";
 import { useAuth } from "@/components/auth/auth-provider";
 import { Button } from "@/components/ui/button";
@@ -31,12 +32,16 @@ export default function LoginPage() {
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const { user, sessionReady } = useAuth();
+  const { user, sessionReady, error: authError } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (user && sessionReady) router.replace(user.isAnonymous ? "/dashboard" : "/pin");
-  }, [user, sessionReady, router]);
+    if (user && sessionReady && !authError) {
+      router.replace(user.isAnonymous ? "/dashboard" : "/pin");
+    }
+  }, [user, sessionReady, router, authError]);
+
+  const waiting = busy && !authError;
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -69,7 +74,10 @@ export default function LoginPage() {
   if (user && !sessionReady) {
     return (
       <main className="flex min-h-dvh items-center justify-center">
-        <p className="text-muted text-sm">Preparing your session…</p>
+        <p className="text-muted flex items-center gap-2 text-sm">
+          <RefreshCw className="size-4 animate-spin motion-reduce:animate-none" aria-hidden />
+          Preparing your session…
+        </p>
       </main>
     );
   }
@@ -117,14 +125,14 @@ export default function LoginPage() {
               />
             </div>
 
-            {error ? (
+            {error || authError ? (
               <p role="alert" className="text-danger text-sm">
-                {error}
+                {error || authError}
               </p>
             ) : null}
 
-            <Button type="submit" variant="primary" className="w-full" disabled={busy}>
-              {busy ? "Please wait…" : mode === "signin" ? "Sign in" : "Create account"}
+            <Button type="submit" variant="primary" className="w-full" disabled={waiting}>
+              {waiting ? "Please wait…" : mode === "signin" ? "Sign in" : "Create account"}
             </Button>
           </form>
 
@@ -148,7 +156,7 @@ export default function LoginPage() {
               variant="secondary"
               className="w-full"
               onClick={() => void tryDemo()}
-              disabled={busy}
+              disabled={waiting}
             >
               Try the demo
             </Button>

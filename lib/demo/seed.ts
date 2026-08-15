@@ -290,12 +290,14 @@ async function isEmpty(): Promise<boolean> {
 export async function seedDemoData(): Promise<void> {
   if (!(await isEmpty())) return;
   const seed = buildDemoSeed();
-  for (const item of seed.vault) await saveVaultItem(item);
-  for (const item of seed.notes) await saveNote(item);
-  for (const item of seed.tasks) await saveTask(item);
-  for (const item of seed.income) await saveIncomeEntry(item);
-  for (const item of seed.habits) await saveHabit(item);
-  for (const item of seed.focusSessions) await saveFocusSession(item);
+  await Promise.all([
+    ...seed.vault.map((item) => saveVaultItem(item)),
+    ...seed.notes.map((item) => saveNote(item)),
+    ...seed.tasks.map((item) => saveTask(item)),
+    ...seed.income.map((item) => saveIncomeEntry(item)),
+    ...seed.habits.map((item) => saveHabit(item)),
+    ...seed.focusSessions.map((item) => saveFocusSession(item)),
+  ]);
 }
 
 /** Wipe and re-seed the demo account ("Start fresh"). */
