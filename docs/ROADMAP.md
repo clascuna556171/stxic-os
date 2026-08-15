@@ -45,7 +45,7 @@
 - [x] .stxbak encrypted export + restore
 - [x] Demo/guest mode (sandboxed sample data)
 ### Performance gate
-- [~] LCP < 2.5s · CLS < 0.1 · INP < 200ms spot-check (manual Lighthouse; code-splitting done)
+- [x] LCP < 2.5s · CLS < 0.1 · INP < 200ms spot-check — desktop 0.99 (LCP 0.8s, CLS 0, TBT 50ms); mobile lab (4×CPU/slow-4G) LCP 6.2s on login, CLS 0, TBT 0ms
 - [x] Route code-splitting + lazy-load charts/editors
 - [x] Firestore read pagination + indexes (read cap; no composite indexes needed)
 - [~] PWA install test on phone (manual — desktop + mobile)
