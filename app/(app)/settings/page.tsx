@@ -15,6 +15,7 @@ import { useTheme } from "@/components/theme/theme-provider";
 import { useAuth } from "@/components/auth/auth-provider";
 import { BackupCard } from "@/components/features/backup/backup-card";
 import { ObsidianSettingsCard } from "@/components/features/obsidian/obsidian-settings-card";
+import { BiometricCard } from "@/components/features/auth/biometric-card";
 import { PRESET_LIST, hexToHue, hueToHex } from "@/lib/theme";
 import { getSettings, saveSettings } from "@/lib/hydrate";
 import { cn } from "@/lib/utils/cn";
@@ -136,6 +137,8 @@ export default function SettingsPage() {
           </div>
         </CardContent>
       </Card>
+
+      <BiometricCard disabled={demo} />
 
       <BackupCard disabled={demo} />
 

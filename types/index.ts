@@ -38,6 +38,18 @@ export interface UserProfile {
   hasPin: boolean;
   /** Reserved for the future optional paid tier. No payment logic now. */
   plan: "free";
+  /** WebAuthn biometric unlock config (credentialId + salt + wrapped DEK). */
+  biometric?: BiometricConfig;
+}
+
+/** WebAuthn biometric unlock config (stored on the profile). */
+export interface BiometricConfig {
+  /** base64 credential id (rawId). */
+  credentialId: string;
+  /** base64 salt used for PRF eval (public, non-secret). */
+  salt: string;
+  /** DEK wrapped under the PRF-derived KEK (base64 iv.ciphertext). */
+  wrappedDekBiometric: string;
 }
 
 // ─────────────────────────────────────────────────────────────

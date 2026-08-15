@@ -22,6 +22,8 @@ import {
   wrapDek,
 } from "@/lib/auth/crypto";
 import { passwordStrength } from "@/lib/strength";
+import { isBiometricAvailable, unlockWithBiometric } from "@/lib/auth/biometric";
+import type { BiometricConfig } from "@/types";
 
 type Phase = "loading" | "verify" | "onboardMaster" | "onboardPin" | "recoverMaster" | "recoverPin";
 
@@ -38,6 +40,8 @@ export default function PinPage() {
   const [dekRaw, setDekRaw] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [biometricCfg, setBiometricCfg] = useState<BiometricConfig | null>(null);
+  const [biometricBusy, setBiometricBusy] = useState(false);
 
   // Guard: require a signed-in user; demo guests skip the PIN gate.
   useEffect(() => {
@@ -45,7 +49,7 @@ export default function PinPage() {
     else if (!initializing && !user) router.replace("/login");
   }, [initializing, user, demo, router]);
 
-  // Decide onboarding vs verify.
+  // Decide onboarding vs verify; load biometric config when present.
   useEffect(() => {
     if (!user) return;
     void (async () => {
@@ -55,6 +59,10 @@ export default function PinPage() {
         return;
       }
       setPhase(settings.data.pinHash ? "verify" : "onboardMaster");
+      const profile = await getProfile();
+      if (profile.ok && profile.data.biometric) {
+        setBiometricCfg(profile.data.biometric);
+      }
     })();
   }, [user]);
 
@@ -98,6 +106,22 @@ export default function PinPage() {
     },
     [pin, unlock, router],
   );
+
+  const handleBiometric = useCallback(async () => {
+    if (!biometricCfg) return;
+    setBiometricBusy(true);
+    setError("");
+    try {
+      const raw = await unlockWithBiometric(biometricCfg);
+      const dek = await importDek(raw);
+      unlock(dek);
+      router.replace("/dashboard");
+    } catch {
+      setError("Biometric unlock failed. Use your PIN instead.");
+    } finally {
+      setBiometricBusy(false);
+    }
+  }, [biometricCfg, unlock, router]);
 
   const handleVerify = useCallback(async () => {
     if (pin.length < 4) return;
@@ -224,17 +248,24 @@ export default function PinPage() {
               >
                 {busy ? "Unlocking…" : "Unlock"}
               </Button>
-              <button
-                type="button"
-                className="text-muted hover:text-foreground text-xs"
-                onClick={() => {
-                  setPhase("recoverMaster");
-                  setPinState("");
-                  setError("");
-                }}
-              >
-                Forgot PIN?
-              </button>
+              <div className="flex w-full flex-col items-center gap-2">
+                <button
+                  type="button"
+                  className="text-muted hover:text-foreground text-xs"
+                  onClick={() => {
+                    setPhase("recoverMaster");
+                    setPinState("");
+                    setError("");
+                  }}
+                >
+                  Forgot PIN?
+                </button>
+                <BiometricButton
+                  available={biometricCfg !== null}
+                  busy={biometricBusy}
+                  onClick={() => void handleBiometric()}
+                />
+              </div>
             </CardContent>
           </>
         ) : null}
@@ -376,5 +407,35 @@ export default function PinPage() {
         ) : null}
       </Card>
     </main>
+  );
+}
+
+function BiometricButton({
+  available,
+  busy,
+  onClick,
+}: {
+  available: boolean;
+  busy: boolean;
+  onClick: () => void;
+}) {
+  const [supported, setSupported] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void isBiometricAvailable().then((ok) => {
+      if (!cancelled) setSupported(ok);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (supported !== true || !available) return null;
+
+  return (
+    <Button variant="ghost" className="w-full" disabled={busy} onClick={onClick}>
+      {busy ? "Checking…" : "Use biometric"}
+    </Button>
   );
 }

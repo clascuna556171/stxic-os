@@ -166,4 +166,34 @@ export async function verifyPin(
   }
 }
 
+/** Persist the WebAuthn biometric config (credential id, salt, wrapped DEK). */
+export async function saveBiometric(
+  config: UserProfile["biometric"],
+): Promise<Envelope<null>> {
+  const uid = await requireUid();
+  if (!uid) return { ok: false, error: "Unauthorized" };
+  try {
+    await getAdminDb()
+      .doc(`${PROFILE_COLLECTION}/${uid}`)
+      .update({ biometric: config ?? null });
+    return { ok: true, data: null };
+  } catch (error) {
+    return { ok: false, error: (error as Error).message };
+  }
+}
+
+/** Remove the biometric config (user opted out or re-enrolling). */
+export async function clearBiometric(): Promise<Envelope<null>> {
+  const uid = await requireUid();
+  if (!uid) return { ok: false, error: "Unauthorized" };
+  try {
+    await getAdminDb()
+      .doc(`${PROFILE_COLLECTION}/${uid}`)
+      .update({ biometric: null });
+    return { ok: true, data: null };
+  } catch (error) {
+    return { ok: false, error: (error as Error).message };
+  }
+}
+
 export type { Envelope, UserProfile, UserSettings };

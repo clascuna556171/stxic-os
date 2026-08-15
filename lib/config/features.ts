@@ -35,7 +35,7 @@ export const features = {
 
   // ── v2 (flag-gated) ─────────────────────────────────────────
   publish: true,
-  biometric: false,
+  biometric: true,
   push: false,
 } as const;
 
