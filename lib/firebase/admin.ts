@@ -4,8 +4,10 @@
  * Used by server actions + route handlers + proxy.ts to verify session
  * tokens. Credentials resolution:
  *   1. `FIREBASE_SERVICE_ACCOUNT_PATH` → load that JSON as a service account.
- *   2. `GOOGLE_APPLICATION_CREDENTIALS` → application-default credentials.
- *   3. Otherwise → no credential (Firebase emulator mode, zero cost).
+ *   2. `FIREBASE_SERVICE_ACCOUNT_JSON` → parse the service-account JSON inline
+ *      (serverless hosts like Vercel have no runtime filesystem to read from).
+ *   3. `GOOGLE_APPLICATION_CREDENTIALS` → application-default credentials.
+ *   4. Otherwise → no credential (Firebase emulator mode, zero cost).
  *
  * NEVER import this module from a client component.
  */
@@ -65,6 +67,8 @@ export function getAdminApp() {
   if (serviceAccountPath) {
     const json = JSON.parse(readFileSync(serviceAccountPath, "utf8"));
     options.credential = cert(json);
+  } else if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
+    options.credential = cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON));
   } else if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
     options.credential = applicationDefault();
   } else if (isEmulatorMode()) {
