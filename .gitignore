@@ -36,6 +36,9 @@ firebase-debug.log
 firestore-debug.log
 stxic-service-account*.json
 
+# android release keystore (secret — never commit)
+android/stxic-release.keystore
+
 # env files (can opt-in for committing if needed)
 .env*
 !.env.example

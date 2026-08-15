@@ -29,6 +29,10 @@ npm install
 npm run dev        # http://localhost:3000
 ```
 
+**Android APK:** the app ships as a thin Capacitor shell that loads the
+deployed web app. See [`docs/BUILD_APK.md`](docs/BUILD_APK.md) for the full
+step-by-step build guide.
+
 ## Scripts
 
 | Command                | Purpose                                   |
