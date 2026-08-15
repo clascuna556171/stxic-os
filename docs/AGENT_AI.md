@@ -2,7 +2,7 @@
 
 ## Ownership
 - `lib/ai/` (groq.ts, ollama.ts, router.ts, prompts.ts) — FULL OWNERSHIP
-- `app/ai/` chat UI · digest in `lib/ai/digest.ts`
+- `app/ai/` chat UI · digest in `lib/ai/digest.ts` · planner in `lib/ai/planner.ts`
 
 ## Router
 - Default `auto`: Ollama/Qwen2.5-Coder-1.5B first → Groq fallback.
@@ -29,3 +29,5 @@
 ## Done
 - Groq streaming chat; local Ollama chat (README: `ollama serve` + model
   pull steps); digest JSON consumed by dashboard card.
+- Study planner (`/study`): open tasks + hours/day + study days → 7-day
+  schedule via `studyPlannerPrompt` (ephemeral, generated on demand).

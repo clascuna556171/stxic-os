@@ -1,4 +1,5 @@
 import {
+  CalendarDays,
   CircleDollarSign,
   FileText,
   KeyRound,
@@ -33,6 +34,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Income", href: "/income", icon: CircleDollarSign, feature: "income" },
   { label: "Focus", href: "/focus", icon: Timer, feature: "focus" },
   { label: "AI chat", href: "/ai", icon: Sparkles, feature: "ai" },
+  { label: "Study", href: "/study", icon: CalendarDays, feature: "studyPlanner" },
   { label: "News", href: "/news", icon: Newspaper, feature: "news" },
   { label: "Habits", href: "/habits", icon: Repeat, feature: "habits" },
   { label: "Settings", href: "/settings", icon: Settings },

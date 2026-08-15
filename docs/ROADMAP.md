@@ -56,7 +56,7 @@
 - [x] Reading list (save for later → notes)
 - [x] AI chat (Groq streaming + Ollama local fallback)
 - [x] AI daily digest on dashboard
-- [ ] AI study planner
+- [x] AI study planner
 - [ ] BADS-DE: iCal sync + drafts + risk pill + Google Calendar
 - [x] Habit tracker (streaks + AI nudges)
 - [ ] File→text converter (PDF/DOCX/TXT/MD/CSV/XLSX/HTML)

@@ -23,6 +23,7 @@ export const features = {
   news: true,
   habits: true,
   ai: true,
+  studyPlanner: true,
   badsde: false,
   convert: false,
   obsidian: false,
