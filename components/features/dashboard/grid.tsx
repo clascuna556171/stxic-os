@@ -131,7 +131,7 @@ function GridItem({ widget, children, onCommit, onHide, colWidth }: GridItemProp
         {children}
       </div>
 
-      <div className="absolute top-1.5 left-1.5 z-10 flex items-center gap-1">
+      <div className="absolute top-1.5 left-1.5 z-10 hidden items-center gap-1 md:flex">
         <button
           type="button"
           aria-label="Move widget"
@@ -161,7 +161,10 @@ function GridItem({ widget, children, onCommit, onHide, colWidth }: GridItemProp
         onPointerMove={onPointerMove}
         onPointerUp={endDrag}
         onPointerCancel={endDrag}
-        className={cn(handleCls, "absolute right-1.5 bottom-1.5 z-10 cursor-nwse-resize")}
+        className={cn(
+          handleCls,
+          "absolute right-1.5 bottom-1.5 z-10 hidden cursor-nwse-resize md:block",
+        )}
         style={{ touchAction: "none" }}
       >
         <ArrowDownRight className="size-4" />
@@ -199,7 +202,7 @@ export function DashboardGrid({
   return (
     <div
       ref={containerRef}
-      className="grid select-none"
+      className="flex select-none flex-col md:grid"
       style={{
         gridTemplateColumns: `repeat(${GRID_COLS}, minmax(0, 1fr))`,
         gridAutoRows: `${ROW_HEIGHT}px`,

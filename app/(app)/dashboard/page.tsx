@@ -112,9 +112,9 @@ export default function DashboardPage() {
           <h2 className="text-foreground text-xl font-semibold tracking-tight">Welcome back</h2>
           <p className="text-muted text-sm">Your private life OS, at a glance.</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex w-full items-center gap-3 sm:w-auto">
           <Select value="" onValueChange={addWidget} disabled={hidden.length === 0}>
-            <SelectTrigger className="w-44">
+            <SelectTrigger className="w-full sm:w-44">
               <SelectValue placeholder="Add widget…" />
             </SelectTrigger>
             <SelectContent>
@@ -125,7 +125,7 @@ export default function DashboardPage() {
               ))}
             </SelectContent>
           </Select>
-          <p className="text-muted flex items-center gap-1.5 text-xs">
+          <p className="text-muted hidden items-center gap-1.5 text-xs sm:flex">
             Quick launcher
             <Kbd>⌘K</Kbd>
           </p>

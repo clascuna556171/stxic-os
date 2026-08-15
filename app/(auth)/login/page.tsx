@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { BrandMark } from "@/components/brand/brand-mark";
 
 function friendlyAuthError(message: string): string {
   if (message.includes("invalid-credential") || message.includes("wrong-password")) {
@@ -84,8 +85,8 @@ export default function LoginPage() {
 
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center gap-6 px-4">
-      <div className="flex items-center gap-2">
-        <span className="bg-accent size-3 rounded-full" />
+      <div className="flex items-center gap-2.5">
+        <BrandMark size={30} />
         <span className="text-foreground text-lg font-semibold tracking-tight">Stxic</span>
       </div>
 

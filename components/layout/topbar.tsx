@@ -6,14 +6,20 @@ import { NAV_ITEMS } from "@/components/layout/nav-items";
 import { openCommandPalette } from "@/components/command/command-palette";
 import { Kbd } from "@/components/ui/kbd";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
+import { BrandMark } from "@/components/brand/brand-mark";
 
 export function Topbar() {
   const pathname = usePathname();
   const title = NAV_ITEMS.find((n) => pathname.startsWith(n.href))?.label ?? "Stxic";
 
   return (
-    <header className="border-border bg-surface/60 flex h-14 shrink-0 items-center justify-between gap-3 border-b px-4 backdrop-blur md:px-6">
-      <h1 className="text-foreground text-sm font-semibold">{title}</h1>
+    <header className="border-border bg-surface/60 flex min-h-14 shrink-0 items-center justify-between gap-3 border-b px-4 pt-[env(safe-area-inset-top)] backdrop-blur md:px-6 md:pt-0">
+      <div className="flex min-w-0 items-center gap-2">
+        <span className="md:hidden">
+          <BrandMark size={20} tile={false} />
+        </span>
+        <h1 className="text-foreground truncate text-sm font-semibold">{title}</h1>
+      </div>
 
       <div className="flex items-center gap-2">
         <button

@@ -61,7 +61,10 @@ export function AppShell({ children }: { children: ReactNode }) {
             </button>
           </div>
         ) : null}
-        <main className="flex-1 px-4 pt-6 pb-20 md:px-6 md:pb-6">{children}</main>
+        <main className="flex-1 px-4 pt-6 pb-24 md:px-6 md:pb-6">
+          <div className="pb-[env(safe-area-inset-bottom)] md:hidden" />
+          {children}
+        </main>
       </div>
       <MobileNav />
       <CommandPalette items={items} open={paletteOpen} onOpenChange={setPaletteOpen} />

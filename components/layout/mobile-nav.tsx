@@ -9,6 +9,7 @@ import { NAV_ITEMS, PRIMARY_MOBILE_ITEMS } from "@/components/layout/nav-items";
 import { isEnabled } from "@/lib/config/features";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
+import { BrandMark } from "@/components/brand/brand-mark";
 import type { NavItem } from "@/components/layout/nav-items";
 
 function isVisible(item: NavItem): boolean {
@@ -67,9 +68,12 @@ export function MobileNav() {
             aria-describedby={undefined}
           >
             <div className="border-border flex items-center justify-between border-b px-4 py-3">
-              <DialogPrimitive.Title className="text-foreground text-base font-semibold">
-                All sections
-              </DialogPrimitive.Title>
+              <div className="flex items-center gap-2.5">
+                <BrandMark size={22} />
+                <DialogPrimitive.Title className="text-foreground text-base font-semibold">
+                  All sections
+                </DialogPrimitive.Title>
+              </div>
               <DialogPrimitive.Close className="text-muted hover:bg-surface-2 hover:text-foreground rounded-md p-1 transition-colors">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"

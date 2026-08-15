@@ -8,6 +8,7 @@ import { NAV_ITEMS } from "@/components/layout/nav-items";
 import { useAuth } from "@/components/auth/auth-provider";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Button } from "@/components/ui/button";
+import { BrandMark } from "@/components/brand/brand-mark";
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -15,8 +16,8 @@ export function Sidebar() {
 
   return (
     <aside className="border-border bg-surface hidden w-56 shrink-0 flex-col border-r md:flex">
-      <div className="border-border flex h-14 items-center gap-2 border-b px-4">
-        <span className="bg-accent size-2.5 rounded-full" />
+      <div className="border-border flex h-14 items-center gap-2.5 border-b px-4">
+        <BrandMark size={22} />
         <span className="text-foreground text-sm font-semibold tracking-tight">Stxic</span>
       </div>
 

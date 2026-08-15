@@ -4,6 +4,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { getAdminDb } from "@/lib/firebase/admin";
 import { PUBLISHED_COLLECTION, type PublishedDoc } from "@/lib/publish/shared";
+import { BrandMark } from "@/components/brand/brand-mark";
 import { cn } from "@/lib/utils/cn";
 
 export const dynamic = "force-dynamic";
@@ -40,7 +41,10 @@ export default async function PublishPage({ params }: PublishPageProps) {
   return (
     <main className="flex min-h-screen flex-col items-center">
       <header className="border-border flex w-full items-center justify-between border-b px-4 py-3">
-        <span className="text-muted text-sm font-medium tracking-tight">Stxic</span>
+        <span className="flex items-center gap-2 text-sm font-medium tracking-tight">
+          <BrandMark size={18} tile={false} />
+          Stxic
+        </span>
         <span className="text-muted text-xs">Published note</span>
       </header>
 

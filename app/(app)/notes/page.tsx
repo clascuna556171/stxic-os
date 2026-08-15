@@ -165,14 +165,14 @@ export default function NotesPage() {
 
   return (
     <div className="flex h-full flex-col gap-4">
-      <header className="flex items-center justify-between gap-3">
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-foreground text-xl font-semibold tracking-tight">Notes</h2>
           <p className="text-muted text-sm">
             {notes.length} note{notes.length === 1 ? "" : "s"} · autosaves as you type
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {obsidianLive ? (
             <Button variant="secondary" onClick={() => setVaultOpen(true)}>
               <Plug />

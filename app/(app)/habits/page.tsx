@@ -94,8 +94,8 @@ export default function HabitsPage() {
         <p className="text-muted text-sm">Daily streaks with a little AI encouragement.</p>
       </header>
 
-      <div className="flex items-end gap-2">
-        <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+        <div className="flex flex-col gap-1.5 sm:flex-1">
           <label htmlFor="habit-name" className="text-muted text-xs">
             New habit
           </label>
@@ -107,7 +107,7 @@ export default function HabitsPage() {
               if (e.key === "Enter") void addHabit();
             }}
             placeholder="e.g. Morning run"
-            className="w-56"
+            className="w-full sm:w-56"
           />
         </div>
         <div className="flex flex-col gap-1.5">
@@ -119,10 +119,15 @@ export default function HabitsPage() {
             value={emoji}
             onChange={(e) => setEmoji(e.target.value)}
             placeholder="🏃"
-            className="w-16"
+            className="w-full sm:w-16"
           />
         </div>
-        <Button variant="primary" onClick={() => void addHabit()} disabled={!name.trim()}>
+        <Button
+          variant="primary"
+          className="w-full sm:w-auto"
+          onClick={() => void addHabit()}
+          disabled={!name.trim()}
+        >
           <Plus />
           Add
         </Button>
