@@ -10,16 +10,21 @@ import { Kbd } from "@/components/ui/kbd";
 import { PriorityBadge } from "@/components/features/tasks/priority-badge";
 import { WorldClocks } from "@/components/features/clocks/world-clocks";
 import { FxConverter } from "@/components/features/fx/fx-converter";
-import { getSettings, listFocusSessions, listIncome, listTasks } from "@/lib/hydrate";
+import { getSettings, listFocusSessions, listHabits, listIncome, listTasks } from "@/lib/hydrate";
 import { weeklyFocusStat } from "@/lib/focus";
 import { monthlyTotals } from "@/lib/income";
 import { isOverdue } from "@/lib/tasks";
 import { formatDate, startOfDay } from "@/lib/utils/dates";
-import type { Currency, IncomeEntry, TaskItem } from "@/types";
+import type { Currency, Habit, IncomeEntry, TaskItem } from "@/types";
 
 const IncomeChart = dynamic(
   () => import("@/components/features/income/income-chart").then((m) => m.IncomeChart),
   { ssr: false, loading: () => <Skeleton className="h-56 w-full" /> },
+);
+
+const DigestCard = dynamic(
+  () => import("@/components/features/dashboard/digest-card").then((m) => m.DigestCard),
+  { ssr: false, loading: () => <Skeleton className="h-40 w-full" /> },
 );
 
 const PRIORITY_ORDER = { P0: 0, P1: 1, P2: 2 } as const;
@@ -27,6 +32,7 @@ const PRIORITY_ORDER = { P0: 0, P1: 1, P2: 2 } as const;
 export default function DashboardPage() {
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [income, setIncome] = useState<IncomeEntry[]>([]);
+  const [habits, setHabits] = useState<Habit[]>([]);
   const [today, setToday] = useState(0);
   const [focusMin, setFocusMin] = useState(0);
   const [focusSessions, setFocusSessions] = useState(0);
@@ -36,11 +42,12 @@ export default function DashboardPage() {
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const [t, f, i, s] = await Promise.all([
+      const [t, f, i, s, h] = await Promise.all([
         listTasks(),
         listFocusSessions(),
         listIncome(),
         getSettings(),
+        listHabits(),
       ]);
       if (cancelled) return;
       if (t.ok) setTasks(t.data);
@@ -51,6 +58,7 @@ export default function DashboardPage() {
       }
       if (i.ok) setIncome(i.data);
       if (s.ok) setCurrency(s.data.defaultCurrency);
+      if (h.ok) setHabits(h.data);
       setToday(Date.now());
       setLoading(false);
     })();
@@ -93,6 +101,8 @@ export default function DashboardPage() {
         </div>
       ) : (
         <>
+          <DigestCard tasks={tasks} habits={habits} focusMinutes={focusMin} />
+
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <Card className="md:col-span-2">
               <CardHeader className="flex-row items-center justify-between">

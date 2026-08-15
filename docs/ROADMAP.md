@@ -55,10 +55,10 @@
 - [x] News hub: RSS aggregate + TL;DR + save to notes
 - [x] Reading list (save for later → notes)
 - [x] AI chat (Groq streaming + Ollama local fallback)
-- [ ] AI daily digest on dashboard
+- [x] AI daily digest on dashboard
 - [ ] AI study planner
 - [ ] BADS-DE: iCal sync + drafts + risk pill + Google Calendar
-- [ ] Habit tracker (streaks + AI nudges)
+- [x] Habit tracker (streaks + AI nudges)
 - [ ] File→text converter (PDF/DOCX/TXT/MD/CSV/XLSX/HTML)
 - [ ] Obsidian format: export + vault import + wikilinks render
 - [ ] Obsidian LIVE hybrid (Local REST API + MCP): Settings panel + Test Connection
