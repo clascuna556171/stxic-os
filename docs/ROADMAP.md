@@ -79,6 +79,7 @@
 - [x] Note "publish to web" (Obsidian Publish alt) — `/p/[slug]`, flag `publish`
 - [ ] Offline-first sync queue
 - [ ] Optional one-time paid tier (reserved `plan` field) FUTURE
+- [x] **v2 release tag v2.0.0** — deployed to Vercel (stxic-os.vercel.app) + Firebase (stxic-os)
 
 ## 4. Dropped / Revisit Later
 - [x] ~~YT → MP4~~ — dropped (ToS + server cost). Documented in master.
