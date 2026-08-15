@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "275259804779",
+    "project_id": "stxic-os",
+    "storage_bucket": "stxic-os.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:275259804779:android:01ca36fac2e66e940a352e",
+        "android_client_info": {
+          "package_name": "com.stxic.os"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCeTDWqTE9meb-3VB5LwZpCTKDHaXKDTSI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

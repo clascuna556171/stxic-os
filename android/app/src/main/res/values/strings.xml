@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Stxic</string>
+    <string name="title_activity_main">Stxic</string>
+    <string name="package_name">com.stxic.os</string>
+    <string name="custom_url_scheme">com.stxic.os</string>
+</resources>

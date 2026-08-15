@@ -73,11 +73,11 @@
 - [ ] **v1.5 release tag v1.5.0** — push `main` + tag
 
 ## 3. v2 Future (not scheduled)
-- [ ] Android APK via Capacitor (same codebase)
-- [ ] WebAuthn biometric unlock (Android)
-- [ ] Push notifications
+- [x] Android APK via Capacitor (same codebase) — thin shell loading deployed URL; `cap:sync`/`cap:open`
+- [x] WebAuthn biometric unlock (Android + web, PRF extension) — flag `biometric`
+- [x] Push notifications (FCM web + Capacitor native) — flag `push`
+- [x] Note "publish to web" (Obsidian Publish alt) — `/p/[slug]`, flag `publish`
 - [ ] Offline-first sync queue
-- [ ] Note "publish to web" (Obsidian Publish alt)
 - [ ] Optional one-time paid tier (reserved `plan` field) FUTURE
 
 ## 4. Dropped / Revisit Later
