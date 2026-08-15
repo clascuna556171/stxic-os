@@ -151,6 +151,8 @@ export interface UserSettings {
   pinSalt?: string;
   /** PIN-wrapped data encryption key (base64 iv.ciphertext). */
   wrappedDekPin?: string;
+  /** BADS-DE: UM Blackboard iCal feed URL (plaintext, non-sensitive). */
+  blackboard?: { icalUrl?: string };
   obsidian: ObsidianSettings;
 }
 

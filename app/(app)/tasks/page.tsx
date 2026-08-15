@@ -8,7 +8,9 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/toaster";
 import { TaskDialog } from "@/components/features/tasks/task-dialog";
+import { BlackboardPanel } from "@/components/features/tasks/blackboard-panel";
 import { deleteTask, listTasks, saveTask } from "@/lib/hydrate";
+import { isEnabled } from "@/lib/config/features";
 import { cn } from "@/lib/utils/cn";
 import type { TaskItem, TaskStatus } from "@/types";
 
@@ -64,6 +66,11 @@ export default function TasksPage() {
       cancelled = true;
     };
   }, []);
+
+  async function reload() {
+    const res = await listTasks();
+    if (res.ok) setTasks(res.data);
+  }
 
   const sorted = useMemo(
     () =>
@@ -164,6 +171,8 @@ export default function TasksPage() {
           </Button>
         </div>
       </header>
+
+      {isEnabled("badsde") ? <BlackboardPanel onSynced={() => void reload()} /> : null}
 
       {loading ? (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">

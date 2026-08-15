@@ -39,8 +39,8 @@ httpOnly cookie `stxic_session`.
 | POST | `/api/ai/chat` | AI | stub (SSE when shipped) |
 | GET | `/api/news` | NEWS | stub |
 | GET | `/api/news/saved` | NEWS | stub |
-| POST | `/api/badsde/sync` | BADS-DE | stub |
-| POST | `/api/badsde/draft` | BADS-DE | stub |
+| POST | `/api/badsde/sync` | BADS-DE | live (fetch + parse iCal → events) |
+| POST | `/api/badsde/draft` | BADS-DE | stub → drafts are client-side via `/api/ai/chat` |
 | GET | `/api/fx/rate?base=USD&quote=PHP` | CORE | live (1h cache) |
 | POST | `/api/focus/session` | CORE | stub → use `saveFocusSession` (client-side encrypted) |
 | POST | `/api/backup/export` | BACKUP | stub → use `exportBackup` (client-side encrypted) |

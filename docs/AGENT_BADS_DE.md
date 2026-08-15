@@ -5,16 +5,16 @@
 University of Mindanao Blackboard iCal feed.
 
 ## Ownership
-- `lib/blackboard/` (fetch, ical, parser, drafts, sync) — FULL OWNERSHIP
+- `lib/blackboard/` (ical, risk, drafts, sync) — FULL OWNERSHIP
 - `app/tasks/` BADS-DE panel · `docs/badsde.md` (feed URL setup guide)
 
 ## Flow
 ```
 [UM Blackboard iCal URL] → 1. fetch .ics (URL from settings, no creds)
 → 2. parse Event { uid, summary, description, dtstart, dtend, course }
-→ 3. dedupe via sha256(uid) in users/{uid}/blackboard
+→ 3. dedupe via uid in users/{uid}/blackboard
      ├─► mirror to users/{uid}/tasks (type=assignment)
-     │     + Google Calendar (OAuth2, dedicated "UM Blackboard" calendar)
+     │     (Google Calendar OAuth2 mirror — DEFERRED)
      └─► if NEW → enqueue draft
 → 4. Draft: badsDraftPrompt(description) → markdown note in folder "Assignments"
 → 5. Tracker table (Course|Title|Due|Draft|Calendar) + risk pill
@@ -29,5 +29,15 @@ University of Mindanao Blackboard iCal feed.
 - Queue-based, mobile-friendly sync (APK-ready).
 
 ## Done
-- Parse real `fixtures/sample.ics`; duplicate re-run is a no-op; draft note
-  generated; risk pill rendered.
+- Hand-rolled iCal parser (`lib/blackboard/ical.ts`) handles the real UM
+  feed (folded lines, `\,` escaping, `TZID=Asia/Manila`). Unit-tested.
+- Server route `/api/badsde/sync` fetches + parses the feed (CORS bypass);
+  client `lib/blackboard/sync.ts` dedupes, mirrors future events to tasks
+  (type=assignment), and auto-drafts notes into "Assignments".
+- Risk pill (0–3 → Low/Med/High/Critical) rendered in the Tasks panel.
+- Only events due today-or-later are imported (skips past gradebook items).
+
+## Deferred
+- Google Calendar OAuth2 mirror (needs a Google Cloud project + encrypted
+  refresh-token storage).
+- Recurring events / RRULE — not emitted by the current feed.

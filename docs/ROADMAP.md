@@ -57,7 +57,8 @@
 - [x] AI chat (Groq streaming + Ollama local fallback)
 - [x] AI daily digest on dashboard
 - [x] AI study planner
-- [ ] BADS-DE: iCal sync + drafts + risk pill + Google Calendar
+- [x] BADS-DE: iCal sync + drafts + risk pill (UM Blackboard)
+- [ ] BADS-DE: Google Calendar OAuth2 mirror (deferred)
 - [x] Habit tracker (streaks + AI nudges)
 - [x] File→text converter (PDF/DOCX/TXT/MD/CSV/XLSX/HTML)
 - [ ] Obsidian format: export + vault import + wikilinks render
