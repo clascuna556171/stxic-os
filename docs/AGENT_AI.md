@@ -7,7 +7,7 @@
 ## Router
 - Default `auto`: Ollama/Qwen2.5-Coder-1.5B first → Groq fallback.
   Single interface `chat(messages, opts) => Promise<string>`.
-- Groq `llama-3.1-8b-instant`; local `qwen2.5-coder:1.5b`.
+- Groq `llama-3.3-70b-versatile`; local `qwen2.5-coder:1.5b`.
 - Env: `GROQ_API_KEY, GROQ_MODEL, OLLAMA_BASE_URL (http://localhost:11434),
   OLLAMA_MODEL`. Timeouts + graceful canned fallback (never crash UI).
 
