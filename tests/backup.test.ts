@@ -26,7 +26,9 @@ function snapshot(): BackupSnapshot {
     ],
     notes: [],
     tasks: [],
-    income: [],
+    transactions: [],
+    accounts: [],
+    savingsGoals: [],
     habits: [],
     focusSessions: [],
     settings: {
@@ -60,6 +62,7 @@ describe("backup format", () => {
     const manifest = await buildManifest("user-123", 12345);
     expect(manifest).toMatchObject({ version: 1, schema: "stxic", exportedAt: 12345 });
     expect(manifest.collections).toContain("vault");
+    expect(manifest.collections).toContain("transactions");
     expect(manifest.collections).toContain("settings");
   });
 

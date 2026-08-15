@@ -77,6 +77,10 @@
 - [x] WebAuthn biometric unlock (Android + web, PRF extension) — flag `biometric`
 - [x] Push notifications (FCM web + Capacitor native) — flag `push`
 - [x] Note "publish to web" (Obsidian Publish alt) — `/p/[slug]`, flag `publish`
+- [x] **Finance tracker** — Income upgraded: unified transactions ledger
+  (income + expenses), manual account balances (cards/banks), savings goals,
+  overview stats + income-vs-expense chart; nav/dashboard rebranded to Finance;
+  backups extended (old `.stxbak` restores migrate income → transactions)
 - [ ] Offline-first sync queue
 - [ ] Optional one-time paid tier (reserved `plan` field) FUTURE
 - [x] **v2 release tag v2.0.0** — deployed to Vercel (stxic-os.vercel.app) + Firebase (stxic-os)

@@ -19,9 +19,9 @@
    - `POST /api/convert/file` (EXTRAS, client-side fallback)
    - NO route for Obsidian — live sync is client-side only (the server cannot
      reach the user's `127.0.0.1`). See `AGENT_OBSIDIAN_HYBRID.md`.
-3. `lib/hydrate.ts` typed getters/setters: vault, notes, tasks, income,
-   habits, focusSessions, settings, news, blackboard, fx, backup,
-   obsidianConfig (`getObsidianConfig()` / `saveObsidianConfig()`).
+3. `lib/hydrate.ts` typed getters/setters: vault, notes, tasks, transactions,
+   accounts, savingsGoals, habits, focusSessions, settings, news, blackboard,
+   fx, backup, obsidianConfig (`getObsidianConfig()` / `saveObsidianConfig()`).
 4. Feature flags: `{ auth, vault, notes, tasks, income, clocks, fx, presets,
    focus, backup, demo: true; news, habits, ai, badsde, convert, obsidian,
    obsidianLive, semesterPlanner, dashboardGrid, readingList, ocr: false }`.

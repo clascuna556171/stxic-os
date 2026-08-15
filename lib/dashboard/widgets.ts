@@ -29,7 +29,7 @@ export const WIDGETS: WidgetDef[] = [
   { id: "focus", title: "Focus", description: "This week's focus time", minW: 3, minH: 2 },
   { id: "clocks", title: "World clocks", description: "Your pinned timezones", minW: 4, minH: 2 },
   { id: "fx", title: "FX converter", description: "Live currency rates", minW: 3, minH: 3 },
-  { id: "income", title: "Income", description: "Monthly totals", minW: 6, minH: 3 },
+  { id: "income", title: "Finance", description: "Income vs expenses", minW: 6, minH: 3 },
   { id: "habits", title: "Habits", description: "Streaks at a glance", minW: 4, minH: 2 },
   {
     id: "obsidianGraph",

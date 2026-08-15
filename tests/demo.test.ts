@@ -7,7 +7,9 @@ describe("demo seed data", () => {
     expect(seed.vault.length).toBeGreaterThanOrEqual(3);
     expect(seed.notes.length).toBeGreaterThanOrEqual(3);
     expect(seed.tasks.length).toBeGreaterThanOrEqual(4);
-    expect(seed.income.length).toBeGreaterThanOrEqual(4);
+    expect(seed.transactions.length).toBeGreaterThanOrEqual(6);
+    expect(seed.accounts.length).toBeGreaterThanOrEqual(3);
+    expect(seed.savingsGoals.length).toBeGreaterThanOrEqual(2);
     expect(seed.habits.length).toBeGreaterThanOrEqual(1);
     expect(seed.focusSessions.length).toBeGreaterThanOrEqual(5);
   });
@@ -30,14 +32,17 @@ describe("demo seed data", () => {
       ...seed.vault,
       ...seed.notes,
       ...seed.tasks,
-      ...seed.income,
+      ...seed.transactions,
+      ...seed.accounts,
+      ...seed.savingsGoals,
       ...seed.focusSessions,
     ].map((x) => x.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it("uses only supported currencies", () => {
+  it("uses only supported currencies and covers both transaction types", () => {
     const seed = buildDemoSeed();
-    for (const e of seed.income) expect(["PHP", "USD", "EUR", "JPY"]).toContain(e.currency);
+    for (const t of seed.transactions) expect(["PHP", "USD", "EUR", "JPY"]).toContain(t.currency);
+    expect(new Set(seed.transactions.map((t) => t.type))).toEqual(new Set(["income", "expense"]));
   });
 });

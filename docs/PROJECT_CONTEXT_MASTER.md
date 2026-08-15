@@ -3,7 +3,8 @@
 ## Mission
 Stxic is a privacy-first, open-source **Personal Life OS** for students and
 developers. It merges KeepR's life-management features (vault, notes, tasks,
-income, world clocks) with a Blackboard student automation engine (BADS-DE),
+finance — income, expenses, accounts & savings, world clocks) with a
+Blackboard student automation engine (BADS-DE),
 a curated X/Twitter AI/tech news hub, local + cloud AI (Groq + Ollama/Qwen),
 AI daily digests, a USD→PHP converter, UI presets (dark/light), PWA install,
 and encrypted backups. One codebase → web now, Android APK in a future update.
@@ -33,8 +34,9 @@ and encrypted backups. One codebase → web now, Android APK in a future update.
 - **PWA:** manifest + service worker (v1 must; enables future APK)
 
 ## Roadmap Tiers
-- **🟢 v1 — Core:** auth/PIN · vault · notes · tasks/calendar · income
-  (multi-currency) · world clocks · dashboard · FX converter · UI presets +
+- **🟢 v1 — Core:** auth/PIN · vault · notes · tasks/calendar · finance
+  (income + expenses, accounts, savings goals) · world clocks · dashboard ·
+  FX converter · UI presets +
   accent picker + dark/light toggle · command palette · PWA install ·
   encrypted backup (.stxbak) · demo/guest mode · password strength meter ·
   focus timer · performance budget.

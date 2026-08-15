@@ -13,7 +13,10 @@ users/{uid}                      # profile, enc_key_salt, prefs, plan: 'free'
 users/{uid}/vault/{id}           # credentials, ENCRYPTED
 users/{uid}/notes/{id}           # markdown notes, ENCRYPTED
 users/{uid}/tasks/{id}           # tasks, ENCRYPTED
-users/{uid}/income/{id}          # income entries, ENCRYPTED
+users/{uid}/income/{id}          # LEGACY income entries, ENCRYPTED (migration only)
+users/{uid}/transactions/{id}    # finance ledger (income/expense), ENCRYPTED
+users/{uid}/accounts/{id}        # cards/banks w/ manual balances, ENCRYPTED
+users/{uid}/savingsGoals/{id}    # savings goals w/ targets, ENCRYPTED
 users/{uid}/habits/{id}          # habits + streaks, ENCRYPTED
 users/{uid}/focusSessions/{id}   # pomodoro logs, ENCRYPTED
 users/{uid}/settings             # PIN hash, themePreset, accent, theme,
@@ -50,9 +53,12 @@ users/{uid}/demo                 # demo-mode flag + sample data snapshot
   payment logic now.
 
 ## Types (stable, exported for all agents)
-- `UserProfile, VaultItem, Note, TaskItem, IncomeEntry, Habit, FocusSession,
-  UserSettings, BlackboardFeed, NewsConfig, FxCache, ThemePreset,
-  BackupManifest`.
+- `UserProfile, VaultItem, Note, TaskItem, Transaction, FinanceAccount,
+  SavingsGoal, Habit, FocusSession, UserSettings, BlackboardFeed, NewsConfig,
+  FxCache, ThemePreset, BackupManifest`.
+- Legacy `IncomeEntry` remains only for one-time migration + old backups.
+- Collections: encrypted `vault`, `notes`, `tasks`, `transactions`, `accounts`,
+  `savingsGoals`, `habits`, `focusSessions` under `users/{uid}/…`.
 
 ## Done
 - `npm run build` passes · `firestore.rules` complete (deny-all / own-uid,

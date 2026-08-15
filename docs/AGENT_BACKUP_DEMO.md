@@ -5,7 +5,8 @@
 - `app/backup/` page + widgets · `app/demo/` + `lib/demo/` · `/api` routes
 
 ## A. Encrypted Full Backup (.stxbak)
-- One-click export: vault, notes, tasks, income, habits, focusSessions,
+- One-click export: vault, notes, tasks, transactions, accounts, savingsGoals,
+  habits, focusSessions,
   settings → AES-encrypted `.stxbak` zip (WebCrypto; key derived from master
   password via AUTH's `exportBackupKey()`).
 - Bundle includes `manifest.json` (version, schema, exportedAt, uid-hash).
@@ -18,8 +19,9 @@
   restore validates envelope server-side.
 
 ## B. Demo / Guest Mode
-- `app/demo/`: sample vault/notes/tasks/income + 2 weeks of focus stats;
-  seeded from `lib/demo/seed.ts` into a sandboxed demo namespace.
+- `app/demo/`: sample vault/notes/tasks/transactions/accounts/savingsGoals +
+  2 weeks of focus stats; seeded from `lib/demo/seed.ts` into a sandboxed demo
+  namespace.
 - Login screen "Try the demo" → creates ephemeral session (no real account,
   write-limited rules). Banner "Demo data — not real".
 - Demo user cannot: modify real data, backup, or access BADS-DE/Calendar.
@@ -38,7 +40,8 @@
   is selective (never overwrites PIN hash/salt, wrapped DEKs, or Obsidian key).
 - Demo mode: "Try the demo" → anonymous sign-in → auto-unlocked with a
   persisted random demo DEK (`settings.demoDek`), seeded sample
-  vault/notes/tasks/income/habits + 2 weeks of focus stats; "Demo data — not
+  vault/notes/tasks/transactions/accounts/savingsGoals/habits + 2 weeks of
+  focus stats; "Demo data — not
   real" banner with "Start fresh"; backup disabled for guests.
 - `POST /api/backup/export|restore` remain stubs — backup is client-side
   (the server has no DEK/master password); noted in `docs/API.md`.

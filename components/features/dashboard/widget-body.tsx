@@ -9,18 +9,18 @@ import { PriorityBadge } from "@/components/features/tasks/priority-badge";
 import { WorldClocks } from "@/components/features/clocks/world-clocks";
 import { FxConverter } from "@/components/features/fx/fx-converter";
 import { currentStreak } from "@/lib/habits";
-import { monthlyTotals } from "@/lib/income";
+import { netByMonth } from "@/lib/finance";
 import { isOverdue } from "@/lib/tasks";
 import { formatDate, startOfDay } from "@/lib/utils/dates";
-import type { Currency, Habit, IncomeEntry, TaskItem } from "@/types";
+import type { Currency, Habit, TaskItem, Transaction } from "@/types";
 
 const DigestCard = dynamic(
   () => import("@/components/features/dashboard/digest-card").then((m) => m.DigestCard),
   { ssr: false },
 );
 
-const IncomeChart = dynamic(
-  () => import("@/components/features/income/income-chart").then((m) => m.IncomeChart),
+const FinanceChart = dynamic(
+  () => import("@/components/features/income/finance-chart").then((m) => m.FinanceChart),
   { ssr: false },
 );
 
@@ -32,7 +32,7 @@ const ObsidianGraphWidget = dynamic(
 export interface DashboardData {
   tasks: TaskItem[];
   habits: Habit[];
-  income: IncomeEntry[];
+  transactions: Transaction[];
   focusMin: number;
   focusSessions: number;
   currency: Currency;
@@ -138,11 +138,11 @@ export function WidgetBody({ id, data }: { id: string; data: DashboardData }) {
         </Card>
       );
     case "income": {
-      const monthly = monthlyTotals(data.income);
+      const monthly = netByMonth(data.transactions);
       return (
         <Card className="flex h-full flex-col">
           <CardHeader className="flex-row items-center justify-between">
-            <CardTitle>Income</CardTitle>
+            <CardTitle>Finance</CardTitle>
             <Link href="/income" className="text-muted hover:text-foreground text-xs">
               View all
             </Link>
@@ -151,10 +151,10 @@ export function WidgetBody({ id, data }: { id: string; data: DashboardData }) {
             {monthly.length === 0 ? (
               <div className="flex items-center gap-3 py-2 text-sm">
                 <CircleDollarSign className="text-muted size-5" />
-                <p className="text-muted">Add income entries to see a chart.</p>
+                <p className="text-muted">Add income or expenses to see a chart.</p>
               </div>
             ) : (
-              <IncomeChart data={monthly} currency={data.currency} />
+              <FinanceChart data={monthly} currency={data.currency} />
             )}
           </CardContent>
         </Card>

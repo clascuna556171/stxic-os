@@ -18,16 +18,16 @@ import {
   getSettings,
   listFocusSessions,
   listHabits,
-  listIncome,
   listTasks,
+  listTransactions,
   saveSettings,
 } from "@/lib/hydrate";
 import { weeklyFocusStat } from "@/lib/focus";
-import type { Currency, DashboardWidget, Habit, IncomeEntry, TaskItem } from "@/types";
+import type { Currency, DashboardWidget, Habit, TaskItem, Transaction } from "@/types";
 
 export default function DashboardPage() {
   const [tasks, setTasks] = useState<TaskItem[]>([]);
-  const [income, setIncome] = useState<IncomeEntry[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [habits, setHabits] = useState<Habit[]>([]);
   const [today, setToday] = useState(0);
   const [focusMin, setFocusMin] = useState(0);
@@ -43,7 +43,7 @@ export default function DashboardPage() {
       const [t, f, i, s, h] = await Promise.all([
         listTasks(),
         listFocusSessions(),
-        listIncome(),
+        listTransactions(),
         getSettings(),
         listHabits(),
       ]);
@@ -54,7 +54,7 @@ export default function DashboardPage() {
         setFocusMin(stat.totalMinutes);
         setFocusSessions(stat.sessions);
       }
-      if (i.ok) setIncome(i.data);
+      if (i.ok) setTransactions(i.data);
       if (s.ok) {
         setCurrency(s.data.defaultCurrency);
         setWidgets(s.data.dashboard?.widgets?.length ? s.data.dashboard.widgets : defaultLayout());
@@ -101,8 +101,8 @@ export default function DashboardPage() {
   );
 
   const data = useMemo(
-    () => ({ tasks, habits, income, focusMin, focusSessions, currency, now: today }),
-    [tasks, habits, income, focusMin, focusSessions, currency, today],
+    () => ({ tasks, habits, transactions, focusMin, focusSessions, currency, now: today }),
+    [tasks, habits, transactions, focusMin, focusSessions, currency, today],
   );
 
   return (

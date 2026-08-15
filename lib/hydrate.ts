@@ -25,13 +25,16 @@ import { decryptString, encryptString } from "@/lib/auth/crypto";
 import type {
   BlackboardFeed,
   Envelope,
+  FinanceAccount,
   FocusSession,
   FxCache,
   Habit,
   IncomeEntry,
   NewsConfig,
   Note,
+  SavingsGoal,
   TaskItem,
+  Transaction,
   UserProfile,
   UserSettings,
   VaultItem,
@@ -140,9 +143,25 @@ export const saveTask = (item: TaskItem) => writeEncrypted("tasks", item);
 export const deleteTask = (id: string) => removeEncrypted("tasks", id);
 
 // ── Income ───────────────────────────────────────────────────
+// Legacy income collection — only read (and cleaned up) during the one-time
+// migration into the unified `transactions` ledger. See lib/finance.ts.
 export const listIncome = () => readEncrypted<IncomeEntry>("income");
-export const saveIncomeEntry = (item: IncomeEntry) => writeEncrypted("income", item);
 export const deleteIncomeEntry = (id: string) => removeEncrypted("income", id);
+
+// ── Transactions (finance ledger) ─────────────────────────────
+export const listTransactions = () => readEncrypted<Transaction>("transactions");
+export const saveTransaction = (item: Transaction) => writeEncrypted("transactions", item);
+export const deleteTransaction = (id: string) => removeEncrypted("transactions", id);
+
+// ── Accounts (cards / banks, manual balances) ─────────────────
+export const listAccounts = () => readEncrypted<FinanceAccount>("accounts");
+export const saveAccount = (item: FinanceAccount) => writeEncrypted("accounts", item);
+export const deleteAccount = (id: string) => removeEncrypted("accounts", id);
+
+// ── Savings goals ─────────────────────────────────────────────
+export const listSavingsGoals = () => readEncrypted<SavingsGoal>("savingsGoals");
+export const saveSavingsGoal = (item: SavingsGoal) => writeEncrypted("savingsGoals", item);
+export const deleteSavingsGoal = (id: string) => removeEncrypted("savingsGoals", id);
 
 // ── Habits ───────────────────────────────────────────────────
 export const listHabits = () => readEncrypted<Habit>("habits");
@@ -327,7 +346,11 @@ export interface BackupSnapshot {
   vault: VaultItem[];
   notes: Note[];
   tasks: TaskItem[];
-  income: IncomeEntry[];
+  /** Legacy income entries — only present in backups exported before the finance tracker. */
+  income?: IncomeEntry[];
+  transactions: Transaction[];
+  accounts: FinanceAccount[];
+  savingsGoals: SavingsGoal[];
   habits: Habit[];
   focusSessions: FocusSession[];
   settings: UserSettings;
@@ -336,12 +359,15 @@ export interface BackupSnapshot {
 }
 
 export async function getAllForBackup(): Promise<Envelope<BackupSnapshot>> {
-  const [vault, notes, tasks, income, habits, focusSessions, settings, news, bb] =
+  const [vault, notes, tasks, income, transactions, accounts, savingsGoals, habits, focusSessions, settings, news, bb] =
     await Promise.all([
       listVault(),
       listNotes(),
       listTasks(),
       listIncome(),
+      listTransactions(),
+      listAccounts(),
+      listSavingsGoals(),
       listHabits(),
       listFocusSessions(),
       getSettings(),
@@ -352,7 +378,9 @@ export async function getAllForBackup(): Promise<Envelope<BackupSnapshot>> {
     !vault.ok ||
     !notes.ok ||
     !tasks.ok ||
-    !income.ok ||
+    !transactions.ok ||
+    !accounts.ok ||
+    !savingsGoals.ok ||
     !habits.ok ||
     !focusSessions.ok ||
     !settings.ok ||
@@ -362,8 +390,9 @@ export async function getAllForBackup(): Promise<Envelope<BackupSnapshot>> {
     return {
       ok: false,
       error:
-        [vault, notes, tasks, income, habits, focusSessions, settings, news, bb].find((r) => !r.ok)
-          ?.error ?? "Backup failed",
+        [vault, notes, tasks, income, transactions, accounts, savingsGoals, habits, focusSessions, settings, news, bb].find(
+          (r) => !r.ok,
+        )?.error ?? "Backup failed",
     };
   }
   return {
@@ -373,6 +402,9 @@ export async function getAllForBackup(): Promise<Envelope<BackupSnapshot>> {
       notes: notes.data,
       tasks: tasks.data,
       income: income.data,
+      transactions: transactions.data,
+      accounts: accounts.data,
+      savingsGoals: savingsGoals.data,
       habits: habits.data,
       focusSessions: focusSessions.data,
       settings: settings.data,

@@ -101,6 +101,25 @@ export interface TaskItem {
   updatedAt: number;
 }
 
+export type TransactionType = "income" | "expense";
+
+/**
+ * A single finance transaction — income or expense. `amount` is always a
+ * positive magnitude; the sign is implied by `type`.
+ */
+export interface Transaction {
+  id: string;
+  type: TransactionType;
+  label: string;
+  amount: number;
+  currency: Currency;
+  category: string;
+  date: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+/** Legacy income entry shape — only read during one-time migration / old backups. */
 export interface IncomeEntry {
   id: string;
   label: string;
@@ -108,6 +127,33 @@ export interface IncomeEntry {
   currency: Currency;
   category: string;
   date: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export type AccountKind = "cash" | "debit" | "credit" | "e-wallet" | "savings" | "other";
+
+/** A manually tracked card / bank account. Balance is stored, not derived. */
+export interface FinanceAccount {
+  id: string;
+  name: string;
+  kind: AccountKind;
+  currency: Currency;
+  balance: number;
+  /** Masked card number, e.g. "···· 4829". */
+  last4?: string;
+  notes?: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface SavingsGoal {
+  id: string;
+  name: string;
+  target: number;
+  saved: number;
+  currency: Currency;
+  deadline?: number;
   createdAt: number;
   updatedAt: number;
 }
@@ -245,6 +291,15 @@ export interface BackupManifest {
   /** sha256 of the uid (never the raw uid). */
   uidHash: string;
   collections: Array<
-    "vault" | "notes" | "tasks" | "income" | "habits" | "focusSessions" | "settings"
+    | "vault"
+    | "notes"
+    | "tasks"
+    | "income"
+    | "transactions"
+    | "accounts"
+    | "savingsGoals"
+    | "habits"
+    | "focusSessions"
+    | "settings"
   >;
 }

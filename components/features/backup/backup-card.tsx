@@ -93,7 +93,7 @@ export function BackupCard({ disabled = false }: { disabled?: boolean }) {
       setPassword("");
       toast({
         title: "Backup restored",
-        description: `${result.counts.notes} notes, ${result.counts.tasks} tasks, ${result.counts.vault} vault items.`,
+        description: `${result.counts.notes} notes, ${result.counts.tasks} tasks, ${result.counts.transactions} transactions.`,
         variant: "success",
       });
     } else {
@@ -194,7 +194,9 @@ export function BackupCard({ disabled = false }: { disabled?: boolean }) {
               <li>Vault items: {preview.vault}</li>
               <li>Notes: {preview.notes}</li>
               <li>Tasks: {preview.tasks}</li>
-              <li>Income: {preview.income}</li>
+              <li>Transactions: {preview.transactions}</li>
+              <li>Accounts: {preview.accounts}</li>
+              <li>Savings goals: {preview.savingsGoals}</li>
               <li>Habits: {preview.habits}</li>
               <li>Focus sessions: {preview.focusSessions}</li>
             </ul>

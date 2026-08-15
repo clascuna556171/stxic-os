@@ -1,11 +1,11 @@
 "use client";
 
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import type { MonthlyTotal } from "@/lib/income";
+import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import type { MonthNet } from "@/lib/finance";
 import { currencySymbol } from "@/lib/utils/currency";
 import type { Currency } from "@/types";
 
-export function IncomeChart({ data, currency }: { data: MonthlyTotal[]; currency: Currency }) {
+export function FinanceChart({ data, currency }: { data: MonthNet[]; currency: Currency }) {
   const symbol = currencySymbol(currency);
   return (
     <div className="h-64 w-full">
@@ -25,17 +25,19 @@ export function IncomeChart({ data, currency }: { data: MonthlyTotal[]; currency
             width={56}
           />
           <Tooltip
-            formatter={(value) => [`${symbol}${Number(value)}`, "Total"]}
+            formatter={(value, name) => [`${symbol}${Number(value)}`, name]}
             contentStyle={{
               background: "var(--surface)",
               border: "1px solid var(--border)",
               borderRadius: 8,
             }}
             labelStyle={{ color: "var(--text)" }}
-            itemStyle={{ color: "var(--accent)" }}
+            itemStyle={{ color: "var(--text)" }}
             cursor={{ fill: "var(--surface-2)" }}
           />
-          <Bar dataKey="total" fill="var(--accent)" radius={[4, 4, 0, 0]} maxBarSize={48} />
+          <Legend wrapperStyle={{ color: "var(--text-muted)", fontSize: 12 }} />
+          <Bar dataKey="income" name="Income" fill="var(--success)" radius={[4, 4, 0, 0]} maxBarSize={36} />
+          <Bar dataKey="expense" name="Expenses" fill="var(--danger)" radius={[4, 4, 0, 0]} maxBarSize={36} />
         </BarChart>
       </ResponsiveContainer>
     </div>

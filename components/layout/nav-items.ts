@@ -33,7 +33,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Vault", href: "/vault", icon: KeyRound, feature: "vault" },
   { label: "Notes", href: "/notes", icon: FileText, feature: "notes" },
   { label: "Tasks", href: "/tasks", icon: ListTodo, feature: "tasks" },
-  { label: "Income", href: "/income", icon: CircleDollarSign, feature: "income" },
+  { label: "Finance", href: "/income", icon: CircleDollarSign, feature: "income" },
   { label: "Focus", href: "/focus", icon: Timer, feature: "focus" },
   { label: "AI chat", href: "/ai", icon: Sparkles, feature: "ai" },
   { label: "Study", href: "/study", icon: CalendarDays, feature: "studyPlanner" },
@@ -52,5 +52,5 @@ export const PRIMARY_MOBILE_ITEMS: NavItem[] = [
   { label: "Home", href: "/dashboard", icon: LayoutDashboard },
   { label: "Notes", href: "/notes", icon: FileText, feature: "notes" },
   { label: "Tasks", href: "/tasks", icon: ListTodo, feature: "tasks" },
-  { label: "Income", href: "/income", icon: CircleDollarSign, feature: "income" },
+  { label: "Finance", href: "/income", icon: CircleDollarSign, feature: "income" },
 ];

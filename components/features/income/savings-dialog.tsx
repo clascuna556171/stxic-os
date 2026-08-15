@@ -19,66 +19,64 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import type { Currency, IncomeEntry } from "@/types";
-import { INCOME_CATEGORIES } from "@/lib/income";
+import type { Currency, SavingsGoal } from "@/types";
 import { toISODate } from "@/lib/utils/dates";
 
 const CURRENCIES: Currency[] = ["PHP", "USD", "EUR", "JPY"];
 
-interface IncomeEntryDialogProps {
+interface SavingsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  initial?: IncomeEntry;
+  initial?: SavingsGoal;
   defaultCurrency: Currency;
-  defaultDate?: string;
-  categories: string[];
-  onSave: (entry: IncomeEntry) => Promise<void>;
+  onSave: (goal: SavingsGoal) => Promise<void>;
 }
 
-export function IncomeEntryDialog({
+export function SavingsDialog({
   open,
   onOpenChange,
   initial,
   defaultCurrency,
-  defaultDate = "",
-  categories,
   onSave,
-}: IncomeEntryDialogProps) {
-  const [label, setLabel] = useState(initial?.label ?? "");
-  const [amount, setAmount] = useState(initial ? String(initial.amount) : "");
+}: SavingsDialogProps) {
+  const [name, setName] = useState(initial?.name ?? "");
+  const [target, setTarget] = useState(initial ? String(initial.target) : "");
+  const [saved, setSaved] = useState(initial ? String(initial.saved) : "");
   const [currency, setCurrency] = useState<Currency>(initial?.currency ?? defaultCurrency);
-  const [category, setCategory] = useState(initial?.category ?? "");
-  const [date, setDate] = useState(initial ? toISODate(initial.date) : defaultDate);
+  const [deadline, setDeadline] = useState(initial?.deadline ? toISODate(initial.deadline) : "");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
-  const allCategories = [...new Set([...INCOME_CATEGORIES, ...categories])].sort();
-
   async function submit() {
-    const value = Number(amount);
-    if (!label.trim()) {
-      setError("Label is required.");
+    const targetValue = Number(target);
+    const savedValue = Number(saved) || 0;
+    if (!name.trim()) {
+      setError("Name is required.");
       return;
     }
-    if (!Number.isFinite(value) || value < 0) {
-      setError("Enter a valid amount.");
+    if (!Number.isFinite(targetValue) || targetValue <= 0) {
+      setError("Enter a valid target amount.");
       return;
     }
-    const [y, m, d] = date.split("-").map(Number);
+    if (!Number.isFinite(savedValue) || savedValue < 0) {
+      setError("Enter a valid saved amount.");
+      return;
+    }
     const now = Date.now();
-    const entry: IncomeEntry = {
+    const deadlineTs = deadline ? new Date(deadline).getTime() : undefined;
+    const goal: SavingsGoal = {
       id: initial?.id ?? crypto.randomUUID(),
-      label: label.trim(),
-      amount: Math.round(value * 100) / 100,
+      name: name.trim(),
+      target: Math.round(targetValue * 100) / 100,
+      saved: Math.round(savedValue * 100) / 100,
       currency,
-      category: category.trim() || "Other",
-      date: new Date(y ?? 1970, (m ?? 1) - 1, d ?? 1).getTime(),
+      deadline: deadlineTs,
       createdAt: initial?.createdAt ?? now,
       updatedAt: now,
     };
     setBusy(true);
     try {
-      await onSave(entry);
+      await onSave(goal);
       onOpenChange(false);
     } finally {
       setBusy(false);
@@ -89,36 +87,52 @@ export function IncomeEntryDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{initial ? "Edit entry" : "Add income"}</DialogTitle>
-          <DialogDescription>Track what you earn, in any supported currency.</DialogDescription>
+          <DialogTitle>{initial ? "Edit goal" : "New savings goal"}</DialogTitle>
+          <DialogDescription>Set a target and track your progress toward it.</DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-col gap-4">
           <div>
-            <Label htmlFor="inc-label">Label</Label>
+            <Label htmlFor="sav-name">Name</Label>
             <Input
-              id="inc-label"
-              value={label}
-              onChange={(e) => setLabel(e.target.value)}
-              placeholder="July allowance"
+              id="sav-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Emergency fund"
               autoFocus
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="inc-amount">Amount</Label>
+              <Label htmlFor="sav-target">Target</Label>
               <Input
-                id="inc-amount"
+                id="sav-target"
                 type="number"
                 inputMode="decimal"
                 min={0}
                 step="0.01"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
+                value={target}
+                onChange={(e) => setTarget(e.target.value)}
                 placeholder="0.00"
               />
             </div>
+            <div>
+              <Label htmlFor="sav-saved">Saved so far</Label>
+              <Input
+                id="sav-saved"
+                type="number"
+                inputMode="decimal"
+                min={0}
+                step="0.01"
+                value={saved}
+                onChange={(e) => setSaved(e.target.value)}
+                placeholder="0.00"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <Label>Currency</Label>
               <Select value={currency} onValueChange={(v) => setCurrency(v as Currency)}>
@@ -134,31 +148,13 @@ export function IncomeEntryDialog({
                 </SelectContent>
               </Select>
             </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <Label htmlFor="inc-category">Category</Label>
+              <Label htmlFor="sav-deadline">Deadline (optional)</Label>
               <Input
-                id="inc-category"
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                placeholder="Salary"
-                list="inc-categories"
-              />
-              <datalist id="inc-categories">
-                {allCategories.map((c) => (
-                  <option key={c} value={c} />
-                ))}
-              </datalist>
-            </div>
-            <div>
-              <Label htmlFor="inc-date">Date</Label>
-              <Input
-                id="inc-date"
+                id="sav-deadline"
                 type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
+                value={deadline}
+                onChange={(e) => setDeadline(e.target.value)}
               />
             </div>
           </div>
@@ -171,7 +167,7 @@ export function IncomeEntryDialog({
             Cancel
           </Button>
           <Button variant="primary" onClick={submit} disabled={busy}>
-            {busy ? "Saving…" : initial ? "Save changes" : "Add entry"}
+            {busy ? "Saving…" : initial ? "Save changes" : "Create goal"}
           </Button>
         </DialogFooter>
       </DialogContent>

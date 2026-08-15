@@ -5,33 +5,50 @@
  */
 
 import {
+  deleteAccount,
   deleteFocusSession,
   deleteHabit,
-  deleteIncomeEntry,
   deleteNote,
+  deleteSavingsGoal,
   deleteTask,
+  deleteTransaction,
   deleteVaultItem,
+  listAccounts,
   listFocusSessions,
   listHabits,
-  listIncome,
   listNotes,
+  listSavingsGoals,
   listTasks,
+  listTransactions,
   listVault,
+  saveAccount,
   saveFocusSession,
   saveHabit,
-  saveIncomeEntry,
   saveNote,
+  saveSavingsGoal,
   saveTask,
+  saveTransaction,
   saveVaultItem,
 } from "@/lib/hydrate";
 import { toISODate } from "@/lib/utils/dates";
-import type { FocusSession, Habit, IncomeEntry, Note, TaskItem, VaultItem } from "@/types";
+import type {
+  FinanceAccount,
+  FocusSession,
+  Habit,
+  Note,
+  SavingsGoal,
+  TaskItem,
+  Transaction,
+  VaultItem,
+} from "@/types";
 
 export interface DemoSeed {
   vault: VaultItem[];
   notes: Note[];
   tasks: TaskItem[];
-  income: IncomeEntry[];
+  transactions: Transaction[];
+  accounts: FinanceAccount[];
+  savingsGoals: SavingsGoal[];
   habits: Habit[];
   focusSessions: FocusSession[];
 }
@@ -98,7 +115,7 @@ export function buildDemoSeed(now = Date.now()): DemoSeed {
       id: crypto.randomUUID(),
       title: "Welcome to Stxic",
       content:
-        "# Welcome 👋\n\nThis is your **demo workspace** — sample data, not real.\n\nTry the sidebar pages:\n- **Vault** — logins with a strength meter\n- **Notes** — this markdown editor\n- **Tasks** — drag between board columns\n- **Income** — monthly chart + FX\n- **Focus** — Pomodoro timer\n",
+        "# Welcome 👋\n\nThis is your **demo workspace** — sample data, not real.\n\nTry the sidebar pages:\n- **Vault** — logins with a strength meter\n- **Notes** — this markdown editor\n- **Tasks** — drag between board columns\n- **Finance** — income, expenses, accounts & savings\n- **Focus** — Pomodoro timer\n",
       folder: "",
       tags: ["demo"],
       favorite: true,
@@ -184,9 +201,10 @@ export function buildDemoSeed(now = Date.now()): DemoSeed {
     },
   ];
 
-  const income: IncomeEntry[] = [
+  const transactions: Transaction[] = [
     {
       id: crypto.randomUUID(),
+      type: "income",
       label: "Freelance project",
       amount: 4500,
       currency: "PHP",
@@ -197,6 +215,7 @@ export function buildDemoSeed(now = Date.now()): DemoSeed {
     },
     {
       id: crypto.randomUUID(),
+      type: "income",
       label: "Monthly allowance",
       amount: 3000,
       currency: "PHP",
@@ -207,6 +226,7 @@ export function buildDemoSeed(now = Date.now()): DemoSeed {
     },
     {
       id: crypto.randomUUID(),
+      type: "income",
       label: "Tutoring",
       amount: 1200,
       currency: "PHP",
@@ -217,6 +237,7 @@ export function buildDemoSeed(now = Date.now()): DemoSeed {
     },
     {
       id: crypto.randomUUID(),
+      type: "income",
       label: "Monthly allowance",
       amount: 3000,
       currency: "PHP",
@@ -227,6 +248,7 @@ export function buildDemoSeed(now = Date.now()): DemoSeed {
     },
     {
       id: crypto.randomUUID(),
+      type: "income",
       label: "Birthday gift",
       amount: 500,
       currency: "PHP",
@@ -234,6 +256,115 @@ export function buildDemoSeed(now = Date.now()): DemoSeed {
       date: daysAgo(6),
       createdAt: daysAgo(6),
       updatedAt: daysAgo(6),
+    },
+    {
+      id: crypto.randomUUID(),
+      type: "expense",
+      label: "Groceries",
+      amount: 850,
+      currency: "PHP",
+      category: "Food",
+      date: daysAgo(3),
+      createdAt: daysAgo(3),
+      updatedAt: daysAgo(3),
+    },
+    {
+      id: crypto.randomUUID(),
+      type: "expense",
+      label: "Jeepney fare",
+      amount: 120,
+      currency: "PHP",
+      category: "Transport",
+      date: daysAgo(4),
+      createdAt: daysAgo(4),
+      updatedAt: daysAgo(4),
+    },
+    {
+      id: crypto.randomUUID(),
+      type: "expense",
+      label: "Internet bill",
+      amount: 1500,
+      currency: "PHP",
+      category: "Utilities",
+      date: daysAgo(5),
+      createdAt: daysAgo(5),
+      updatedAt: daysAgo(5),
+    },
+    {
+      id: crypto.randomUUID(),
+      type: "expense",
+      label: "Concert ticket",
+      amount: 2000,
+      currency: "PHP",
+      category: "Entertainment",
+      date: daysAgo(9),
+      createdAt: daysAgo(9),
+      updatedAt: daysAgo(9),
+    },
+    {
+      id: crypto.randomUUID(),
+      type: "expense",
+      label: "New backpack",
+      amount: 1100,
+      currency: "PHP",
+      category: "Shopping",
+      date: daysAgo(20),
+      createdAt: daysAgo(20),
+      updatedAt: daysAgo(20),
+    },
+  ];
+
+  const accounts: FinanceAccount[] = [
+    {
+      id: crypto.randomUUID(),
+      name: "GCash",
+      kind: "e-wallet",
+      currency: "PHP",
+      balance: 2450.5,
+      last4: "9912",
+      createdAt: daysAgo(30),
+      updatedAt: daysAgo(1),
+    },
+    {
+      id: crypto.randomUUID(),
+      name: "BPI Debit",
+      kind: "debit",
+      currency: "PHP",
+      balance: 8750,
+      last4: "4829",
+      createdAt: daysAgo(30),
+      updatedAt: daysAgo(1),
+    },
+    {
+      id: crypto.randomUUID(),
+      name: "Cash",
+      kind: "cash",
+      currency: "PHP",
+      balance: 1200,
+      createdAt: daysAgo(30),
+      updatedAt: daysAgo(1),
+    },
+  ];
+
+  const savingsGoals: SavingsGoal[] = [
+    {
+      id: crypto.randomUUID(),
+      name: "Emergency fund",
+      target: 20000,
+      saved: 7500,
+      currency: "PHP",
+      createdAt: daysAgo(40),
+      updatedAt: daysAgo(1),
+    },
+    {
+      id: crypto.randomUUID(),
+      name: "New laptop",
+      target: 60000,
+      saved: 24000,
+      currency: "PHP",
+      deadline: daysAgo(-120),
+      createdAt: daysAgo(40),
+      updatedAt: daysAgo(1),
     },
   ];
 
@@ -267,22 +398,22 @@ export function buildDemoSeed(now = Date.now()): DemoSeed {
     });
   }
 
-  return { vault, notes, tasks, income, habits, focusSessions };
+  return { vault, notes, tasks, transactions, accounts, savingsGoals, habits, focusSessions };
 }
 
 /** True when the demo account has no seeded data yet. */
 async function isEmpty(): Promise<boolean> {
-  const [vault, notes, tasks, income] = await Promise.all([
+  const [vault, notes, tasks, transactions] = await Promise.all([
     listVault(),
     listNotes(),
     listTasks(),
-    listIncome(),
+    listTransactions(),
   ]);
   return (
     (!vault.ok || vault.data.length === 0) &&
     (!notes.ok || notes.data.length === 0) &&
     (!tasks.ok || tasks.data.length === 0) &&
-    (!income.ok || income.data.length === 0)
+    (!transactions.ok || transactions.data.length === 0)
   );
 }
 
@@ -294,7 +425,9 @@ export async function seedDemoData(): Promise<void> {
     ...seed.vault.map((item) => saveVaultItem(item)),
     ...seed.notes.map((item) => saveNote(item)),
     ...seed.tasks.map((item) => saveTask(item)),
-    ...seed.income.map((item) => saveIncomeEntry(item)),
+    ...seed.transactions.map((item) => saveTransaction(item)),
+    ...seed.accounts.map((item) => saveAccount(item)),
+    ...seed.savingsGoals.map((item) => saveSavingsGoal(item)),
     ...seed.habits.map((item) => saveHabit(item)),
     ...seed.focusSessions.map((item) => saveFocusSession(item)),
   ]);
@@ -302,18 +435,22 @@ export async function seedDemoData(): Promise<void> {
 
 /** Wipe and re-seed the demo account ("Start fresh"). */
 export async function resetDemo(): Promise<void> {
-  const [vault, notes, tasks, income, habits, focus] = await Promise.all([
+  const [vault, notes, tasks, transactions, accounts, goals, habits, focus] = await Promise.all([
     listVault(),
     listNotes(),
     listTasks(),
-    listIncome(),
+    listTransactions(),
+    listAccounts(),
+    listSavingsGoals(),
     listHabits(),
     listFocusSessions(),
   ]);
   if (vault.ok) for (const item of vault.data) await deleteVaultItem(item.id);
   if (notes.ok) for (const item of notes.data) await deleteNote(item.id);
   if (tasks.ok) for (const item of tasks.data) await deleteTask(item.id);
-  if (income.ok) for (const item of income.data) await deleteIncomeEntry(item.id);
+  if (transactions.ok) for (const item of transactions.data) await deleteTransaction(item.id);
+  if (accounts.ok) for (const item of accounts.data) await deleteAccount(item.id);
+  if (goals.ok) for (const item of goals.data) await deleteSavingsGoal(item.id);
   if (habits.ok) for (const item of habits.data) await deleteHabit(item.id);
   if (focus.ok) for (const item of focus.data) await deleteFocusSession(item.id);
   await seedDemoData();

@@ -6,23 +6,28 @@
  */
 
 import {
+  saveAccount,
   saveFocusSession,
   saveHabit,
-  saveIncomeEntry,
   saveNote,
+  saveSavingsGoal,
   saveSettings,
   saveTask,
+  saveTransaction,
   saveVaultItem,
   type BackupSnapshot,
 } from "@/lib/hydrate";
 import { decryptSnapshot, parseBackup } from "@/lib/backup/format";
+import { migrateIncomeToTransactions } from "@/lib/finance";
 import type { BackupManifest, UserSettings } from "@/types";
 
 export interface RestoreCounts {
   vault: number;
   notes: number;
   tasks: number;
-  income: number;
+  transactions: number;
+  accounts: number;
+  savingsGoals: number;
   habits: number;
   focusSessions: number;
 }
@@ -37,7 +42,9 @@ export function countsOf(snapshot: BackupSnapshot): RestoreCounts {
     vault: snapshot.vault.length,
     notes: snapshot.notes.length,
     tasks: snapshot.tasks.length,
-    income: snapshot.income.length,
+    transactions: snapshot.transactions?.length ?? snapshot.income?.length ?? 0,
+    accounts: snapshot.accounts?.length ?? 0,
+    savingsGoals: snapshot.savingsGoals?.length ?? 0,
     habits: snapshot.habits.length,
     focusSessions: snapshot.focusSessions.length,
   };
@@ -72,24 +79,32 @@ export async function restoreBackup(
     vault: 0,
     notes: 0,
     tasks: 0,
-    income: 0,
+    transactions: 0,
+    accounts: 0,
+    savingsGoals: 0,
     habits: 0,
     focusSessions: 0,
   };
   try {
     const file = parseBackup(text);
     const snapshot = await decryptSnapshot(masterPassword, file);
-    const counts = countsOf(snapshot);
+
+    // Backward-compat: backups exported before the finance tracker only hold
+    // `income` — migrate those into the unified transactions ledger.
+    const transactions =
+      snapshot.transactions ?? migrateIncomeToTransactions(snapshot.income ?? []);
 
     for (const item of snapshot.vault) await saveVaultItem(item);
     for (const item of snapshot.notes) await saveNote(item);
     for (const item of snapshot.tasks) await saveTask(item);
-    for (const item of snapshot.income) await saveIncomeEntry(item);
+    for (const item of transactions) await saveTransaction(item);
+    for (const item of snapshot.accounts ?? []) await saveAccount(item);
+    for (const item of snapshot.savingsGoals ?? []) await saveSavingsGoal(item);
     for (const item of snapshot.habits) await saveHabit(item);
     for (const item of snapshot.focusSessions) await saveFocusSession(item);
     await saveSettings(settingsPatch(snapshot.settings));
 
-    return { ok: true, counts };
+    return { ok: true, counts: countsOf(snapshot) };
   } catch (error) {
     return { ok: false, error: (error as Error).message, counts: empty };
   }
