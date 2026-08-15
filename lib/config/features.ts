@@ -32,6 +32,11 @@ export const features = {
   dashboardGrid: true,
   readingList: true,
   ocr: true,
+
+  // ── v2 (flag-gated) ─────────────────────────────────────────
+  publish: true,
+  biometric: false,
+  push: false,
 } as const;
 
 export type FeatureKey = keyof typeof features;

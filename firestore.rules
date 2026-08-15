@@ -26,6 +26,14 @@ service cloud.firestore {
       allow write: if request.auth != null;
     }
 
+    // ── Publish to web: public reads, server-only writes ─────────────
+    // Client writes are denied; the publish/unpublish server actions use the
+    // Admin SDK, which bypasses these rules. Owners are enforced server-side.
+    match /published/{slug} {
+      allow read: if true;
+      allow write: if false;
+    }
+
     // Everything else is denied by default.
   }
 }

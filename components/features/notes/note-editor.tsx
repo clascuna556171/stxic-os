@@ -7,6 +7,7 @@ import {
   Columns2,
   Download,
   Eye,
+  Globe,
   PenLine,
   Star,
   Trash2,
@@ -17,9 +18,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "@/components/ui/toaster";
 import { saveNote } from "@/lib/hydrate";
 import { downloadObsidianNote } from "@/lib/obsidian/export";
+import { publishNote, unpublishNote } from "@/lib/publish/actions";
+import { sanitizeSlug } from "@/lib/publish/shared";
+import { isEnabled } from "@/lib/config/features";
 import { cn } from "@/lib/utils/cn";
 import type { Note } from "@/types";
 
@@ -61,6 +73,10 @@ export function NoteEditor({
   const [tagsText, setTagsText] = useState(note.tags.join(", "));
   const [view, setView] = useState<ViewMode>("write");
   const [saveState, setSaveState] = useState<"saved" | "saving" | "dirty">("saved");
+  const [publishOpen, setPublishOpen] = useState(false);
+  const [slug, setSlug] = useState("");
+  const [publishing, setPublishing] = useState(false);
+  const publishEnabled = isEnabled("publish");
 
   const draft = useRef({ title, content, folder, tagsText });
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -106,6 +122,61 @@ export function NoteEditor({
 
   function exportMarkdown() {
     downloadObsidianNote(buildNote());
+  }
+
+  function openPublish() {
+    setSlug(note.publishedSlug ?? sanitizeSlug(draft.current.title || "untitled-note"));
+    setPublishOpen(true);
+  }
+
+  async function onPublish() {
+    const d = draft.current;
+    setPublishing(true);
+    try {
+      const res = await publishNote({ slug, title: d.title.trim(), content: d.content });
+      if (!res.ok) {
+        toast({ title: "Publish failed", description: res.error, variant: "danger" });
+        return;
+      }
+      const updated = { ...buildNote(), publishedSlug: res.data.slug };
+      const save = await saveNote(updated);
+      if (save.ok) onSaved(updated);
+      setPublishOpen(false);
+      toast({ title: "Published", description: res.data.url, variant: "success" });
+    } catch (err) {
+      toast({ title: "Publish failed", description: (err as Error).message, variant: "danger" });
+    } finally {
+      setPublishing(false);
+    }
+  }
+
+  async function onUnpublish() {
+    if (!note.publishedSlug) return;
+    setPublishing(true);
+    try {
+      const res = await unpublishNote(note.publishedSlug);
+      if (!res.ok) {
+        toast({ title: "Unpublish failed", description: res.error, variant: "danger" });
+        return;
+      }
+      const updated = { ...buildNote(), publishedSlug: undefined };
+      const save = await saveNote(updated);
+      if (save.ok) onSaved(updated);
+      setPublishOpen(false);
+      toast({ title: "Unpublished", description: "Your page is no longer public." });
+    } catch (err) {
+      toast({ title: "Unpublish failed", description: (err as Error).message, variant: "danger" });
+    } finally {
+      setPublishing(false);
+    }
+  }
+
+  async function copyLink() {
+    if (!note.publishedSlug) return;
+    await navigator.clipboard.writeText(
+      `${window.location.origin}/p/${note.publishedSlug}`,
+    );
+    toast({ title: "Link copied", description: "Paste it anywhere to share." });
   }
 
   const savedLabel =
@@ -156,6 +227,16 @@ export function NoteEditor({
               aria-label="Save to Obsidian"
             >
               <UploadCloud />
+            </Button>
+          ) : null}
+          {publishEnabled ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={openPublish}
+              aria-label={note.publishedSlug ? "Manage published page" : "Publish to web"}
+            >
+              <Globe className={cn("size-4", note.publishedSlug && "text-accent")} />
             </Button>
           ) : null}
           <Button
@@ -269,6 +350,61 @@ export function NoteEditor({
           ) : null}
         </div>
       </div>
+
+      <Dialog open={publishOpen} onOpenChange={setPublishOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {note.publishedSlug ? "Manage published page" : "Publish to web"}
+            </DialogTitle>
+            <DialogDescription>
+              {note.publishedSlug
+                ? "Update the content, copy the link, or take the page down."
+                : "This note becomes a public page anyone with the link can read."}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex flex-col gap-3">
+            <div>
+              <Label htmlFor="publish-slug">URL slug</Label>
+              <Input
+                id="publish-slug"
+                value={slug}
+                onChange={(e) => setSlug(sanitizeSlug(e.target.value))}
+                placeholder="my-public-note"
+                disabled={publishing}
+              />
+              <p className="text-muted mt-1 text-xs">/p/{slug || "…"}</p>
+            </div>
+            {note.publishedSlug ? (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="secondary"
+                  onClick={() => void copyLink()}
+                  disabled={publishing}
+                  className="flex-1"
+                >
+                  Copy link
+                </Button>
+              </div>
+            ) : null}
+          </div>
+
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setPublishOpen(false)} disabled={publishing}>
+              Cancel
+            </Button>
+            {note.publishedSlug ? (
+              <Button variant="destructive" onClick={() => void onUnpublish()} disabled={publishing}>
+                {publishing ? "Working…" : "Unpublish"}
+              </Button>
+            ) : null}
+            <Button variant="primary" onClick={() => void onPublish()} disabled={publishing}>
+              {publishing ? "Publishing…" : note.publishedSlug ? "Update page" : "Publish"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

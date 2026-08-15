@@ -14,7 +14,7 @@ const PUBLIC_PATHS = new Set(["/login", "/demo", "/_not-found"]);
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (PUBLIC_PATHS.has(pathname)) {
+  if (PUBLIC_PATHS.has(pathname) || pathname.startsWith("/p/")) {
     return NextResponse.next();
   }
 

@@ -67,6 +67,8 @@ export interface Note {
   favorite: boolean;
   createdAt: number;
   updatedAt: number;
+  /** Set once the note has been published to a public `/p/<slug>` page. */
+  publishedSlug?: string;
 }
 
 export type TaskStatus = "todo" | "in_progress" | "done";
