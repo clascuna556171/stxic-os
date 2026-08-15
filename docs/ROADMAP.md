@@ -66,7 +66,7 @@
 - [ ] Obsidian LIVE hybrid: `lib/obsidian/client.ts` REST client (client-side)
 - [ ] Obsidian LIVE hybrid: Push/Pull buttons + vault browser + confirm dialog
 - [ ] Obsidian LIVE hybrid: MCP config-only (no agent) + cert-trust docs
-- [ ] Semester planner (term grid)
+- [x] Semester planner (term grid)
 - [ ] Custom dashboard grid (drag-resize widgets)
 - [ ] AI OCR for scanned PDFs (after converter)
 

@@ -25,10 +25,11 @@ two-way bridge is a separate feature — see `AGENT_OBSIDIAN_HYBRID.md`.
 ## C. Reading List (`lib/news/readingList.ts`)
 - "Save for later" queue in news; item → Notes when marked read.
 
-## D. Semester Planner (`app/planner/`)
+## D. Semester Planner (`app/semester/`)
 - Term grid mapping BADS-DE assignments + self tasks onto weeks; AI
   study-planner fills free gaps (studyPlannerPrompt). Depends on hydrate
   tasks + BADS-DE events.
+- Shipped: 16-week Monday grid, per-week "Plan week" (AI), links to /study.
 
 ## E. Custom Dashboard Grid (`components/features/dashboard/`)
 - Drag-resize widgets (clocks, chart, habits, digest, focus) like macOS

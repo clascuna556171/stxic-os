@@ -28,7 +28,7 @@ export const features = {
   convert: true,
   obsidian: false,
   obsidianLive: false,
-  semesterPlanner: false,
+  semesterPlanner: true,
   dashboardGrid: false,
   readingList: true,
   ocr: false,
