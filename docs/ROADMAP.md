@@ -61,14 +61,15 @@
 - [ ] BADS-DE: Google Calendar OAuth2 mirror (deferred)
 - [x] Habit tracker (streaks + AI nudges)
 - [x] File→text converter (PDF/DOCX/TXT/MD/CSV/XLSX/HTML)
-- [ ] Obsidian format: export + vault import + wikilinks render
-- [ ] Obsidian LIVE hybrid (Local REST API + MCP): Settings panel + Test Connection
-- [ ] Obsidian LIVE hybrid: `lib/obsidian/client.ts` REST client (client-side)
-- [ ] Obsidian LIVE hybrid: Push/Pull buttons + vault browser + confirm dialog
-- [ ] Obsidian LIVE hybrid: MCP config-only (no agent) + cert-trust docs
+- [x] Obsidian format: export + vault import + wikilinks render
+- [x] Obsidian LIVE hybrid (Local REST API + MCP): Settings panel + Test Connection
+- [x] Obsidian LIVE hybrid: `lib/obsidian/client.ts` REST client (client-side)
+- [x] Obsidian LIVE hybrid: Push/Pull buttons + vault browser + confirm dialog
+- [x] Obsidian LIVE hybrid: MCP config-only (no agent) + cert-trust docs
+- [x] Obsidian graph view (dashboard widget — vault nodes + links)
 - [x] Semester planner (term grid)
 - [x] Custom dashboard grid (drag-resize widgets)
-- [ ] AI OCR for scanned PDFs (after converter)
+- [x] AI OCR for scanned PDFs (after converter)
 - [ ] **v1.5 release tag v1.5.0** — push `main` + tag
 
 ## 3. v2 Future (not scheduled)
@@ -77,11 +78,11 @@
 - [ ] Push notifications
 - [ ] Offline-first sync queue
 - [ ] Note "publish to web" (Obsidian Publish alt)
-- [ ] Optional one-time paid tier (reserved `plan` field)
+- [ ] Optional one-time paid tier (reserved `plan` field) FUTURE
 
 ## 4. Dropped / Revisit Later
 - [x] ~~YT → MP4~~ — dropped (ToS + server cost). Documented in master.
 - [ ] Quick capture / inbox note (not selected — could revisit)
 - [ ] End-of-day review (not selected — could revisit)
-- [ ] Backlinks graph panel (Obsidian — future option)
+- [x] Backlinks graph panel (Obsidian — future option)
 - [ ] Two-way live vault watch (Obsidian — future option)
