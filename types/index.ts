@@ -153,6 +153,8 @@ export interface UserSettings {
   wrappedDekPin?: string;
   /** BADS-DE: UM Blackboard iCal feed URL (plaintext, non-sensitive). */
   blackboard?: { icalUrl?: string };
+  /** Dashboard widget grid layout (ordered, persisted). */
+  dashboard?: { widgets: DashboardWidget[] };
   obsidian: ObsidianSettings;
 }
 
@@ -194,6 +196,15 @@ export interface FxCache {
   quote: Currency;
   rate: number;
   fetchedAt: number;
+}
+
+/** A dashboard widget's position/size in the 12-column grid. */
+export interface DashboardWidget {
+  id: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
 }
 
 // ─────────────────────────────────────────────────────────────

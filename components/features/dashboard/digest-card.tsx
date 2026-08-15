@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { aiChatOnce } from "@/lib/ai/client";
 import { digestMessages, parseTopPriorities, stripJsonBlock } from "@/lib/ai/digest";
+import { cn } from "@/lib/utils/cn";
 import type { Habit, TaskItem } from "@/types";
 
 const MarkdownPreview = dynamic(
@@ -19,10 +20,12 @@ export function DigestCard({
   tasks,
   habits,
   focusMinutes,
+  className,
 }: {
   tasks: TaskItem[];
   habits: Habit[];
   focusMinutes: number;
+  className?: string;
 }) {
   const [text, setText] = useState("");
   const [priorities, setPriorities] = useState<string[]>([]);
@@ -47,7 +50,7 @@ export function DigestCard({
   }
 
   return (
-    <Card>
+    <Card className={cn("flex h-full flex-col", className)}>
       <CardHeader className="flex-row items-center justify-between">
         <CardTitle>Daily digest</CardTitle>
         <Button variant="secondary" size="sm" onClick={() => void generate()} disabled={loading}>
@@ -55,7 +58,7 @@ export function DigestCard({
           {text ? "Regenerate" : "Generate"}
         </Button>
       </CardHeader>
-      <CardContent>
+      <CardContent className="min-h-0 flex-1 overflow-auto">
         {loading ? (
           <div className="space-y-2">
             <Skeleton className="h-4 w-3/4" />

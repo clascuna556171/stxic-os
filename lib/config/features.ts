@@ -29,7 +29,7 @@ export const features = {
   obsidian: false,
   obsidianLive: false,
   semesterPlanner: true,
-  dashboardGrid: false,
+  dashboardGrid: true,
   readingList: true,
   ocr: false,
 } as const;

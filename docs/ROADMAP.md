@@ -67,7 +67,7 @@
 - [ ] Obsidian LIVE hybrid: Push/Pull buttons + vault browser + confirm dialog
 - [ ] Obsidian LIVE hybrid: MCP config-only (no agent) + cert-trust docs
 - [x] Semester planner (term grid)
-- [ ] Custom dashboard grid (drag-resize widgets)
+- [x] Custom dashboard grid (drag-resize widgets)
 - [ ] AI OCR for scanned PDFs (after converter)
 
 ## 3. v2 Future (not scheduled)

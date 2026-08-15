@@ -32,8 +32,10 @@ two-way bridge is a separate feature — see `AGENT_OBSIDIAN_HYBRID.md`.
 - Shipped: 16-week Monday grid, per-week "Plan week" (AI), links to /study.
 
 ## E. Custom Dashboard Grid (`components/features/dashboard/`)
-- Drag-resize widgets (clocks, chart, habits, digest, focus) like macOS
-  widgets; layout persisted to settings.
+- Freeform drag-resize widgets (digest, tasks, focus, clocks, fx, income,
+  habits) on a 12-column grid; layout persisted to settings
+  (`settings.dashboard.widgets`). Drag via grip handle, resize via the
+  bottom-right corner, hide/restore via the "Add widget" menu. Shipped.
 
 ## F. AI OCR — LATER (reserved)
 - For scanned PDFs flagged in converter: OCR via Groq (`ocrExtractPrompt`).
