@@ -21,7 +21,7 @@ export const features = {
 
   // ── v1.5 Extras (flag-gated) ───────────────────────────────
   news: true,
-  habits: false,
+  habits: true,
   ai: true,
   badsde: false,
   convert: false,

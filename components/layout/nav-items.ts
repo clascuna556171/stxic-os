@@ -5,6 +5,7 @@ import {
   LayoutDashboard,
   ListTodo,
   Newspaper,
+  Repeat,
   Settings,
   Sparkles,
   Timer,
@@ -33,5 +34,6 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Focus", href: "/focus", icon: Timer, feature: "focus" },
   { label: "AI chat", href: "/ai", icon: Sparkles, feature: "ai" },
   { label: "News", href: "/news", icon: Newspaper, feature: "news" },
+  { label: "Habits", href: "/habits", icon: Repeat, feature: "habits" },
   { label: "Settings", href: "/settings", icon: Settings },
 ];

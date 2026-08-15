@@ -24,6 +24,7 @@ import {
   saveTask,
   saveVaultItem,
 } from "@/lib/hydrate";
+import { toISODate } from "@/lib/utils/dates";
 import type { FocusSession, Habit, IncomeEntry, Note, TaskItem, VaultItem } from "@/types";
 
 export interface DemoSeed {
@@ -40,6 +41,15 @@ function daysAgo(days: number, hour = 9): number {
   d.setDate(d.getDate() - days);
   d.setHours(hour, 0, 0, 0);
   return d.getTime();
+}
+
+/** Fill `log` with `streak` consecutive completed days ending at `now`. */
+function habitLog(streak: number, now: number): Record<string, boolean> {
+  const log: Record<string, boolean> = {};
+  for (let i = 0; i < streak; i++) {
+    log[toISODate(now - i * 86_400_000)] = true;
+  }
+  return log;
 }
 
 /** Build the sample data set (pure — no Firestore, unit-tested). */
@@ -233,7 +243,7 @@ export function buildDemoSeed(now = Date.now()): DemoSeed {
       name: "Morning run",
       emoji: "🏃",
       streak: 4,
-      log: {},
+      log: habitLog(4, now),
       createdAt: now,
     },
     {
@@ -241,7 +251,7 @@ export function buildDemoSeed(now = Date.now()): DemoSeed {
       name: "Read 20 pages",
       emoji: "📖",
       streak: 2,
-      log: {},
+      log: habitLog(2, now),
       createdAt: now,
     },
   ];
