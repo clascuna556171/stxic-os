@@ -2,13 +2,25 @@
 
 import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { Send, Sparkles, Square } from "lucide-react";
+import { Check, Send, Sparkles, Square, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/toaster";
 import { streamAiChat } from "@/lib/ai/client";
+import { describeAction, parseAiAction, type AiAction } from "@/lib/ai/actions";
+import { aiChatSystemPrompt } from "@/lib/ai/prompts";
+import {
+  deleteNote,
+  deleteTask,
+  deleteTransaction,
+  getSettings,
+  saveNote,
+  saveTask,
+  saveTransaction,
+} from "@/lib/hydrate";
 import { cn } from "@/lib/utils/cn";
 import type { AiProvider, ChatMessage } from "@/lib/ai/types";
+import type { Currency, Note, TaskItem, Transaction } from "@/types";
 
 const MarkdownPreview = dynamic(
   () => import("@/components/features/notes/markdown-preview").then((m) => m.MarkdownPreview),
@@ -29,6 +41,8 @@ interface UiMessage {
   content: string;
   provider?: string;
   fallback?: boolean;
+  /** Set when this assistant message was created by an AI action, not the model. */
+  action?: { kind: AiAction["kind"]; id: string };
 }
 
 export default function AiChatPage() {
@@ -37,6 +51,7 @@ export default function AiChatPage() {
   const [provider, setProvider] = useState<AiProvider>("auto");
   const [streaming, setStreaming] = useState(false);
   const [streamingId, setStreamingId] = useState<string | null>(null);
+  const [defaultCurrency, setDefaultCurrency] = useState<Currency>("PHP");
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -45,10 +60,29 @@ export default function AiChatPage() {
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages, streaming]);
 
+  useEffect(() => {
+    void getSettings().then((res) => {
+      if (res.ok) setDefaultCurrency(res.data.defaultCurrency);
+    });
+  }, []);
+
   function stop() {
     abortRef.current?.abort();
     setStreaming(false);
     setStreamingId(null);
+  }
+
+  async function undoAction(msg: UiMessage) {
+    if (!msg.action) return;
+    const { kind, id } = msg.action;
+    const res =
+      kind === "task" ? await deleteTask(id) : kind === "note" ? await deleteNote(id) : await deleteTransaction(id);
+    if (res.ok) {
+      setMessages((m) => m.filter((x) => x.id !== msg.id));
+      toast({ title: "Undone", description: "The item was removed." });
+    } else {
+      toast({ title: "Couldn't undo", description: res.error, variant: "danger" });
+    }
   }
 
   function send() {
@@ -58,14 +92,92 @@ export default function AiChatPage() {
 
     const userMsg: UiMessage = { id: crypto.randomUUID(), role: "user", content: text };
     const assistantId = crypto.randomUUID();
-    const assistantMsg: UiMessage = { id: assistantId, role: "assistant", content: "" };
+    const action = parseAiAction(text, defaultCurrency);
+
+    setMessages((m) => [...m, userMsg, { id: assistantId, role: "assistant", content: "" }]);
+
+    // Deterministic action → create the real item, no model call.
+    if (action) {
+      const now = Date.now();
+      void (async () => {
+        let res: { ok: boolean; error?: string } | null = null;
+        let createdId = "";
+        try {
+          if (action.kind === "task") {
+            const item: TaskItem = {
+              id: crypto.randomUUID(),
+              title: action.title,
+              status: "todo",
+              priority: action.priority,
+              type: "task",
+              dueDate: action.dueDate,
+              createdAt: now,
+              updatedAt: now,
+            };
+            const r = await saveTask(item);
+            res = r;
+            createdId = item.id;
+          } else if (action.kind === "income" || action.kind === "expense") {
+            const item: Transaction = {
+              id: crypto.randomUUID(),
+              type: action.kind,
+              label: action.label,
+              amount: action.amount,
+              currency: action.currency,
+              category: action.category,
+              date: now,
+              createdAt: now,
+              updatedAt: now,
+            };
+            const r = await saveTransaction(item);
+            res = r;
+            createdId = item.id;
+          } else {
+            const item: Note = {
+              id: crypto.randomUUID(),
+              title: action.title,
+              content: action.content,
+              folder: "",
+              tags: [],
+              favorite: false,
+              createdAt: now,
+              updatedAt: now,
+            };
+            const r = await saveNote(item);
+            res = r;
+            createdId = item.id;
+          }
+        } catch (e) {
+          res = { ok: false, error: (e as Error).message };
+        }
+
+        if (res?.ok) {
+          setMessages((m) =>
+            m.map((msg) =>
+              msg.id === assistantId
+                ? { ...msg, content: describeAction(action), action: { kind: action.kind, id: createdId } }
+                : msg,
+            ),
+          );
+          toast({ title: `Added ${action.kind}`, description: describeAction(action), variant: "success" });
+        } else {
+          setMessages((m) =>
+            m.map((msg) =>
+              msg.id === assistantId ? { ...msg, content: "Couldn't create that.", fallback: true } : msg,
+            ),
+          );
+          toast({ title: "Action failed", description: res?.error ?? "Unknown error", variant: "danger" });
+        }
+      })();
+      return;
+    }
 
     const history: ChatMessage[] = [
+      { role: "system", content: aiChatSystemPrompt() },
       ...messages.map((m) => ({ role: m.role, content: m.content })),
       { role: "user", content: text },
     ];
 
-    setMessages((m) => [...m, userMsg, assistantMsg]);
     setStreaming(true);
     setStreamingId(assistantId);
 
@@ -167,7 +279,9 @@ export default function AiChatPage() {
                     "max-w-[85%] rounded-xl px-3.5 py-2.5 text-sm whitespace-pre-wrap",
                     msg.role === "user"
                       ? "bg-accent text-accent-fg"
-                      : "bg-surface-2 text-foreground",
+                      : msg.action
+                        ? "border-success/40 bg-success/10 text-foreground border"
+                        : "bg-surface-2 text-foreground",
                   )}
                 >
                   {msg.role === "assistant" && msg.id === streamingId ? (
@@ -175,16 +289,33 @@ export default function AiChatPage() {
                       {msg.content}
                       <span className="text-muted animate-pulse motion-reduce:animate-none">▍</span>
                     </span>
+                  ) : msg.action ? (
+                    <div className="flex items-center gap-2">
+                      <Check className="text-success size-4 shrink-0" aria-hidden />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-foreground font-medium">Added · {msg.content}</p>
+                        <p className="text-muted text-xs">Saved to your {msg.action.kind} list.</p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => void undoAction(msg)}
+                        className="shrink-0"
+                      >
+                        <Undo2 />
+                        Undo
+                      </Button>
+                    </div>
                   ) : msg.role === "assistant" ? (
                     <MarkdownPreview content={msg.content} />
                   ) : (
                     msg.content
                   )}
                 </div>
-                {msg.role === "assistant" && msg.provider ? (
+                {msg.role === "assistant" && (msg.provider || msg.action) ? (
                   <span className="text-muted px-1 text-[11px]">
-                    via {PROVIDER_LABEL[msg.provider] ?? msg.provider}
-                    {msg.fallback ? " · fallback" : ""}
+                    {msg.action ? "· action" : `via ${PROVIDER_LABEL[msg.provider!] ?? msg.provider}`}
+                    {msg.provider && msg.fallback ? " · fallback" : ""}
                   </span>
                 ) : null}
               </div>

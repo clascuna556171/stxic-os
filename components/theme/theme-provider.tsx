@@ -9,7 +9,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { applyTheme } from "@/lib/theme";
+import { applyTheme, PRESETS } from "@/lib/theme";
 import { getSettings, saveSettings } from "@/lib/hydrate";
 import { debounce } from "@/lib/utils/timers";
 import type { ThemeMode, ThemePresetName } from "@/types";
@@ -100,8 +100,12 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     (p: ThemePresetName) => {
       setPresetState(p);
       localStorage.setItem(LS.preset, p);
-      applyTheme(theme, p, undefined);
-      persist({ themePreset: p });
+      const presetAccent = PRESETS[p].accent;
+      // Keep the accent state + slider in sync with the preset's own accent.
+      setAccentState(presetAccent);
+      localStorage.setItem(LS.accent, presetAccent);
+      applyTheme(theme, p, presetAccent);
+      persist({ themePreset: p, accent: presetAccent });
     },
     [theme, persist],
   );

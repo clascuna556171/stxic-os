@@ -17,6 +17,7 @@ import { endSession, establishSession } from "@/lib/auth/actions";
 import { exportDek, generateDek, importDek } from "@/lib/auth/crypto";
 import { getSettings, saveSettings } from "@/lib/hydrate";
 import { resetDemo, seedDemoData } from "@/lib/demo/seed";
+import { withTimeout } from "@/lib/utils/timers";
 import type { UserSettings } from "@/types";
 
 interface AuthState {
@@ -112,29 +113,64 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const unsub = onAuthStateChanged(getAuthClient(), async (u) => {
       setUser(u);
       if (u) {
+        // Establish the httpOnly session cookie. Every step is bounded by a
+        // timeout so a slow/hung admin call can never leave the app on an
+        // infinite "Preparing your session…" screen.
         try {
-          const token = await u.getIdToken();
-          const session = await establishSession(token);
+          const token = await withTimeout(
+            u.getIdToken(),
+            15_000,
+            "Couldn't refresh your session (timeout)",
+          );
+          const session = await withTimeout(
+            establishSession(token),
+            15_000,
+            "Couldn't establish your session (timeout)",
+          );
           if (!session.ok) throw new Error(session.error ?? "Couldn't establish your session");
           setError("");
-          const settings = await getSettings();
-          if (settings.ok && settings.data.autoLockMin) {
+        } catch (e) {
+          if (!u.isAnonymous) {
+            // Real user: surface the failure so the login page can retry
+            // instead of hanging with a disabled button.
+            setError((e as Error).message);
+            setLocked(true);
+            setSessionReady(true);
+            setInitializing(false);
+            return;
+          }
+        }
+
+        if (u.isAnonymous) {
+          // Demo guests never lock: a local random DEK unlocks everything, and
+          // a seed/network failure is non-fatal.
+          const settings = await withTimeout(getSettings(), 10_000, "Couldn't load settings").catch(
+            () => undefined,
+          );
+          if (settings?.ok && settings.data.autoLockMin) {
             setAutoLockMin(settings.data.autoLockMin);
           }
-
-          if (u.isAnonymous) {
-            const key = await ensureDemoKey(settings.ok ? settings.data : undefined);
+          try {
+            const key = await ensureDemoKey(settings?.ok ? settings.data : undefined);
             setSessionKey(key);
-            setDemo(true);
-            setLocked(false);
-            await seedDemoData();
-          } else {
-            setDemo(false);
-            setLocked(true);
+          } catch (e) {
+            setError((e as Error).message);
           }
-        } catch (e) {
-          setError((e as Error).message);
-          setLocked(true);
+          setDemo(true);
+          setLocked(false);
+          setSessionReady(true);
+          setInitializing(false);
+          await seedDemoData().catch(() => undefined);
+          return;
+        }
+
+        setDemo(false);
+        setLocked(true);
+        const settings = await withTimeout(getSettings(), 10_000, "Couldn't load settings").catch(
+          () => undefined,
+        );
+        if (settings?.ok && settings.data.autoLockMin) {
+          setAutoLockMin(settings.data.autoLockMin);
         }
       } else {
         clearSessionKey();

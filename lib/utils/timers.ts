@@ -1,5 +1,22 @@
 /** Debounce + throttle helpers (stable, typed). */
 
+/** Reject a promise after `ms` instead of hanging forever. */
+export function withTimeout<T>(promise: Promise<T>, ms: number, message = "Request timed out"): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(message)), ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (err) => {
+        clearTimeout(timer);
+        reject(err);
+      },
+    );
+  });
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function debounce<Args extends any[]>(fn: (...args: Args) => void, delay = 300) {
   let timer: ReturnType<typeof setTimeout> | undefined;

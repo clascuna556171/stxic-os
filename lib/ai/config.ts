@@ -7,8 +7,8 @@
 
 import type { AiProvider, ConcreteProvider } from "./types";
 
-export const GROQ_DEFAULT_MODEL = "llama-3.3-70b-versatile";
-export const GROQ_VISION_DEFAULT_MODEL = "llama-3.2-11b-vision-preview";
+export const GROQ_DEFAULT_MODEL = "qwen/qwen3.6-27b";
+export const GROQ_VISION_DEFAULT_MODEL = "qwen/qwen3.6-27b";
 export const OLLAMA_DEFAULT_MODEL = "qwen2.5-coder:1.5b";
 
 export function groqConfig() {

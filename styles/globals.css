@@ -38,26 +38,18 @@
   color-scheme: light;
 }
 
-/* ── Presets (accent is the ONLY per-preset accent on a page) ── */
-[data-preset="stxc"] {
+/* ── Accent defaults ─────────────────────────────────────────
+   Presets apply a full re-skin (accent, surfaces, radius, font)
+   at runtime via lib/theme.ts — the JS owns the values. */
+:root,
+[data-theme="dark"] {
   --accent: #00d4ff;
   --accent-hover: #33ddff;
   --accent-fg: #06222b;
+  --preset-font: "Inter";
 }
-[data-preset="mars"] {
-  --accent: #ff6b35;
-  --accent-hover: #ff8355;
-  --accent-fg: #2a0f00;
-}
-[data-preset="midnight"] {
-  --accent: #818cf8;
-  --accent-hover: #9aa3f9;
-  --accent-fg: #0a0a1e;
-}
-[data-preset="mono"] {
-  --accent: #a3a3a3;
-  --accent-hover: #b5b5b5;
-  --accent-fg: #0a0a0a;
+[data-theme="light"] {
+  --preset-font: "Inter";
 }
 
 /* ── Tailwind v4 utility mapping (tokens → utilities) ──────── */
@@ -88,7 +80,7 @@ html {
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: var(--font-inter), system-ui, sans-serif;
+  font-family: var(--preset-font, "Inter"), var(--font-inter), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 

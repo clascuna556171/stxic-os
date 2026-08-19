@@ -9,14 +9,16 @@ import sharp from "sharp";
 
 const SURFACE = "#131313";
 const ACCENT = "#00D4FF";
-const BORDER = "rgba(255,255,255,0.06)";
+const BORDER = "rgba(255,255,255,0.10)";
+const BG = "#0A0A0A";
 
 /**
  * The mark itself (drawn at size `s`, centered in a `s`×`s` viewBox).
  * @param {number} s   canvas size
  * @param {{ center?: number, tile?: boolean }} opts center = fraction of
  *   canvas to scale the mark to (for maskable safe zones); tile = draw the
- *   rounded squircle tile behind the mark.
+ *   rounded squircle tile behind the mark (with a full-bleed dark backdrop so
+ *   the corners read as part of the icon on any background).
  */
 function mark(s, { center = 1, tile = true } = {}) {
   const c = s / 2;
@@ -31,7 +33,7 @@ function mark(s, { center = 1, tile = true } = {}) {
 <svg xmlns="http://www.w3.org/2000/svg" width="${s}" height="${s}" viewBox="0 0 ${s} ${s}">
   ${
     tile
-      ? `<rect width="${s}" height="${s}" rx="${Math.round(24 * (s / 100))}" fill="${SURFACE}" stroke="${BORDER}"/>`
+      ? `<rect width="${s}" height="${s}" fill="${BG}"/><rect width="${s}" height="${s}" rx="${Math.round(24 * (s / 100))}" fill="${SURFACE}" stroke="${BORDER}"/>`
       : ""
   }
   <circle cx="${c}" cy="${c}" r="${ringR}" fill="none" stroke="${ACCENT}" stroke-opacity="0.35" stroke-width="${ringW}"/>

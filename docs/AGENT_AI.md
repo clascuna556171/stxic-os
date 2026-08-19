@@ -7,9 +7,11 @@
 ## Router
 - Default `auto`: Ollama/Qwen2.5-Coder-1.5B first → Groq fallback.
   Single interface `chat(messages, opts) => Promise<string>`.
-- Groq `llama-3.3-70b-versatile`; local `qwen2.5-coder:1.5b`.
-- Env: `GROQ_API_KEY, GROQ_MODEL, OLLAMA_BASE_URL (http://localhost:11434),
-  OLLAMA_MODEL`. Timeouts + graceful canned fallback (never crash UI).
+- Groq `qwen/qwen3.6-27b` (multimodal — chat + vision/OCR); local
+  `qwen2.5-coder:1.5b`.
+- Env: `GROQ_API_KEY, GROQ_MODEL, GROQ_VISION_MODEL, OLLAMA_BASE_URL
+  (http://localhost:11434), OLLAMA_MODEL`. Timeouts + graceful canned
+  fallback (never crash UI).
 
 ## Prompts (centralized in prompts.ts)
 1. `dailyDigestPrompt` → markdown briefing + JSON `top3Priorities`
@@ -32,4 +34,4 @@
 - Study planner (`/study`): open tasks + hours/day + study days → 7-day
   schedule via `studyPlannerPrompt` (ephemeral, generated on demand).
 - OCR (`/api/ocr`, `lib/ai/ocr.ts`): scanned PDF pages → Groq vision
-  (`llama-3.2-11b-vision-preview`, `GROQ_VISION_MODEL`) → cleaned text.
+  (`qwen/qwen3.6-27b`, `GROQ_VISION_MODEL`) → cleaned text.

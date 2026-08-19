@@ -1,4 +1,4 @@
-import type { ThemePreset, ThemePresetName } from "@/types";
+import type { ThemeMode, ThemePreset, ThemePresetName } from "@/types";
 
 /** Preset registry — see docs/AGENT_UI_DESIGN.md. */
 export const PRESETS: Record<ThemePresetName, ThemePreset> = {
@@ -98,12 +98,47 @@ export function hueToHex(hue: number): string {
   return hslToHex(hue, 100, 55);
 }
 
+/** Linear blend of two hex colors: t=0 → a, t=1 → b. */
+export function mixHex(a: string, b: string, t: number): string {
+  const ar = hexToRgb(a);
+  const br = hexToRgb(b);
+  const mix = (i: number) => Math.round((ar[i] ?? 0) + ((br[i] ?? 0) - (ar[i] ?? 0)) * t);
+  const to2 = (n: number) => Math.max(0, Math.min(255, n)).toString(16).padStart(2, "0");
+  return `#${to2(mix(0))}${to2(mix(1))}${to2(mix(2))}`;
+}
+
+/**
+ * Full surface/radius vars for a preset + theme, derived from the preset's
+ * dark `surface`. Light mode mixes the tint toward white. Pure + unit-tested.
+ */
+export function presetSurfaceVars(
+  preset: ThemePresetName,
+  theme: ThemeMode,
+): Record<string, string> {
+  const p = PRESETS[preset];
+  if (theme === "light") {
+    return {
+      "--surface": mixHex(p.surface, "#ffffff", 0.88),
+      "--surface-2": mixHex(p.surface, "#ffffff", 0.95),
+      "--border": "rgba(0, 0, 0, 0.08)",
+      "--radius": p.radius,
+    };
+  }
+  return {
+    "--surface": p.surface,
+    "--surface-2": mixHex(p.surface, "#ffffff", 0.12),
+    "--border": "rgba(255, 255, 255, 0.06)",
+    "--radius": p.radius,
+  };
+}
+
 /**
  * Apply theme + preset + (optional) custom accent to the document root.
- * CSS-var only — instant, no re-render (craft rule).
+ * CSS-var only — instant, no re-render (craft rule). Applies the full preset:
+ * accent, surfaces, radius, and font.
  */
 export function applyTheme(
-  theme: "dark" | "light",
+  theme: ThemeMode,
   preset: ThemePresetName,
   accent?: string,
 ): void {
@@ -116,4 +151,8 @@ export function applyTheme(
   root.style.setProperty("--accent", a);
   root.style.setProperty("--accent-hover", `color-mix(in srgb, ${a} 88%, white)`);
   root.style.setProperty("--accent-fg", contrastFg(a));
+  root.style.setProperty("--preset-font", `"${PRESETS[preset].font}"`);
+  for (const [key, value] of Object.entries(presetSurfaceVars(preset, theme))) {
+    root.style.setProperty(key, value);
+  }
 }

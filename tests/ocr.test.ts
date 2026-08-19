@@ -30,8 +30,8 @@ describe("buildOcrMessages", () => {
 });
 
 describe("groqVisionConfig", () => {
-  it("defaults to the vision preview model", () => {
-    expect(GROQ_VISION_DEFAULT_MODEL).toBe("llama-3.2-11b-vision-preview");
+  it("defaults to the multimodal qwen vision model", () => {
+    expect(GROQ_VISION_DEFAULT_MODEL).toBe("qwen/qwen3.6-27b");
     expect(groqVisionConfig().model).toBe(GROQ_VISION_DEFAULT_MODEL);
   });
 });
