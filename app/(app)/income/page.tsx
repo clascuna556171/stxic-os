@@ -31,6 +31,7 @@ import { toast } from "@/components/ui/toaster";
 import { TransactionDialog } from "@/components/features/income/transaction-dialog";
 import { AccountDialog } from "@/components/features/income/account-dialog";
 import { SavingsDialog } from "@/components/features/income/savings-dialog";
+import { FinanceAssistant } from "@/components/features/income/finance-assistant";
 import {
   deleteAccount,
   deleteSavingsGoal,
@@ -183,6 +184,18 @@ export default function IncomePage() {
   const accountTotals = useMemo(() => accountTotalsByCurrency(accounts), [accounts]);
   const savingsTotals = useMemo(() => savingsTotalsByCurrency(goals), [goals]);
 
+  /** Re-fetch the ledger so the assistant's changes show up everywhere. */
+  async function reload() {
+    const [txRes, accRes, goalRes] = await Promise.all([
+      listTransactions(),
+      listAccounts(),
+      listSavingsGoals(),
+    ]);
+    if (txRes.ok) setTransactions(txRes.data);
+    if (accRes.ok) setAccounts(accRes.data);
+    if (goalRes.ok) setGoals(goalRes.data);
+  }
+
   async function saveTransactionAsync(entry: Transaction) {
     const res = await saveTransaction(entry);
     if (res.ok) {
@@ -275,6 +288,7 @@ export default function IncomePage() {
             <TabsTrigger value="transactions">Transactions</TabsTrigger>
             <TabsTrigger value="accounts">Accounts</TabsTrigger>
             <TabsTrigger value="savings">Savings</TabsTrigger>
+            <TabsTrigger value="assistant">Assistant</TabsTrigger>
           </TabsList>
 
           {/* ── Overview ─────────────────────────────────────── */}
@@ -723,6 +737,11 @@ export default function IncomePage() {
                 })}
               </div>
             )}
+          </TabsContent>
+
+          {/* ── Assistant ────────────────────────────────────── */}
+          <TabsContent value="assistant" className="flex flex-col gap-4">
+            <FinanceAssistant defaultCurrency={defaultCurrency} onChanged={() => void reload()} />
           </TabsContent>
         </Tabs>
       )}

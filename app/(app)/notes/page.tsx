@@ -1,7 +1,16 @@
 "use client";
 
 import { memo, useEffect, useMemo, useRef, useState } from "react";
-import { FileText, FolderDown, FolderUp, Plug, Plus, Search, Star } from "lucide-react";
+import {
+  ChevronDown,
+  FileText,
+  FolderDown,
+  FolderUp,
+  Plug,
+  Plus,
+  Search,
+  Star,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
@@ -76,6 +85,7 @@ export default function NotesPage() {
   const [error, setError] = useState("");
   const [folder, setFolder] = useState("all");
   const [query, setQuery] = useState("");
+  const [foldersOpen, setFoldersOpen] = useState(true);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<Note | null>(null);
@@ -309,22 +319,42 @@ export default function NotesPage() {
                 <span className="text-muted text-xs">{f.count}</span>
               </button>
             ))}
-            {folders.map((f) =>
-              f ? (
-                <button
-                  key={f}
-                  type="button"
-                  onClick={() => changeFolder(f)}
-                  className={cn(
-                    "text-muted hover:text-foreground flex shrink-0 items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm transition-colors",
-                    folder === f && "bg-surface-2 text-foreground font-medium",
-                  )}
-                >
-                  {f}
-                  <span className="text-muted text-xs">{folderCounts.get(f) ?? 0}</span>
-                </button>
-              ) : null,
-            )}
+            <button
+              type="button"
+              onClick={() => setFoldersOpen((o) => !o)}
+              aria-expanded={foldersOpen}
+              className={cn(
+                "text-muted hover:text-foreground flex shrink-0 items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm transition-colors",
+                !foldersOpen && folder !== "all" && folder !== "favorites" && "bg-surface-2 text-foreground font-medium",
+              )}
+            >
+              <span className="flex items-center gap-1.5">
+                <ChevronDown
+                  className={cn("size-4 transition-transform", !foldersOpen && "-rotate-90")}
+                  aria-hidden
+                />
+                Folders
+              </span>
+              <span className="text-muted text-xs">{folders.length}</span>
+            </button>
+            {foldersOpen
+              ? folders.map((f) =>
+                  f ? (
+                    <button
+                      key={f}
+                      type="button"
+                      onClick={() => changeFolder(f)}
+                      className={cn(
+                        "text-muted hover:text-foreground flex shrink-0 items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm transition-colors",
+                        folder === f && "bg-surface-2 text-foreground font-medium",
+                      )}
+                    >
+                      {f}
+                      <span className="text-muted text-xs">{folderCounts.get(f) ?? 0}</span>
+                    </button>
+                  ) : null,
+                )
+              : null}
           </nav>
 
           <div className="border-border border-t p-2">

@@ -10,17 +10,21 @@ import { streamAiChat } from "@/lib/ai/client";
 import { describeAction, parseAiAction, type AiAction } from "@/lib/ai/actions";
 import { aiChatSystemPrompt } from "@/lib/ai/prompts";
 import {
+  deleteAccount,
   deleteNote,
+  deleteSavingsGoal,
   deleteTask,
   deleteTransaction,
   getSettings,
+  saveAccount,
   saveNote,
+  saveSavingsGoal,
   saveTask,
   saveTransaction,
 } from "@/lib/hydrate";
 import { cn } from "@/lib/utils/cn";
 import type { AiProvider, ChatMessage } from "@/lib/ai/types";
-import type { Currency, Note, TaskItem, Transaction } from "@/types";
+import type { Currency, FinanceAccount, Note, SavingsGoal, TaskItem, Transaction } from "@/types";
 
 const MarkdownPreview = dynamic(
   () => import("@/components/features/notes/markdown-preview").then((m) => m.MarkdownPreview),
@@ -77,7 +81,15 @@ export default function AiChatPage() {
     if (!msg.action) return;
     const { kind, id } = msg.action;
     const res =
-      kind === "task" ? await deleteTask(id) : kind === "note" ? await deleteNote(id) : await deleteTransaction(id);
+      kind === "task"
+        ? await deleteTask(id)
+        : kind === "note"
+          ? await deleteNote(id)
+          : kind === "income" || kind === "expense"
+            ? await deleteTransaction(id)
+            : kind === "savingsGoal"
+              ? await deleteSavingsGoal(id)
+              : await deleteAccount(id);
     if (res.ok) {
       setMessages((m) => m.filter((x) => x.id !== msg.id));
       toast({ title: "Undone", description: "The item was removed." });
@@ -134,7 +146,7 @@ export default function AiChatPage() {
             const r = await saveTransaction(item);
             res = r;
             createdId = item.id;
-          } else {
+          } else if (action.kind === "note") {
             const item: Note = {
               id: crypto.randomUUID(),
               title: action.title,
@@ -146,6 +158,33 @@ export default function AiChatPage() {
               updatedAt: now,
             };
             const r = await saveNote(item);
+            res = r;
+            createdId = item.id;
+          } else if (action.kind === "savingsGoal") {
+            const item: SavingsGoal = {
+              id: crypto.randomUUID(),
+              name: action.name,
+              target: action.target,
+              saved: action.saved,
+              currency: action.currency,
+              deadline: action.deadline,
+              createdAt: now,
+              updatedAt: now,
+            };
+            const r = await saveSavingsGoal(item);
+            res = r;
+            createdId = item.id;
+          } else {
+            const item: FinanceAccount = {
+              id: crypto.randomUUID(),
+              name: action.name,
+              kind: action.accountKind,
+              currency: action.currency,
+              balance: action.balance,
+              createdAt: now,
+              updatedAt: now,
+            };
+            const r = await saveAccount(item);
             res = r;
             createdId = item.id;
           }

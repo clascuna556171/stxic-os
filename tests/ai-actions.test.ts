@@ -136,6 +136,48 @@ describe("parseAiAction — notes", () => {
   });
 });
 
+describe("parseAiAction — savings goals", () => {
+  it("add savings goal with an explicit target", () => {
+    expect(parseAiAction("add savings goal: new laptop target 60000", "PHP", NOW)).toEqual({
+      kind: "savingsGoal",
+      name: "new laptop",
+      target: 60000,
+      saved: 0,
+      currency: "PHP",
+      deadline: undefined,
+    });
+  });
+
+  it("uses the trailing number as the target", () => {
+    expect(parseAiAction("set savings goal emergency fund 20000", "PHP", NOW)).toMatchObject({
+      kind: "savingsGoal",
+      name: "emergency fund",
+      target: 20000,
+    });
+  });
+});
+
+describe("parseAiAction — accounts", () => {
+  it("add an account with a balance", () => {
+    expect(parseAiAction("add account: GCash 2500", "PHP", NOW)).toEqual({
+      kind: "account",
+      name: "GCash",
+      accountKind: "e-wallet",
+      currency: "PHP",
+      balance: 2500,
+    });
+  });
+
+  it("guesses a debit card kind", () => {
+    expect(parseAiAction("add card: BPI Debit 8500", "PHP", NOW)).toMatchObject({
+      kind: "account",
+      name: "BPI Debit",
+      accountKind: "debit",
+      balance: 8500,
+    });
+  });
+});
+
 describe("parseAiAction — non-actions", () => {
   it("returns null for plain chat", () => {
     expect(parseAiAction("what's the weather like?", "PHP", NOW)).toBeNull();

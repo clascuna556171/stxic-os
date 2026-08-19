@@ -6,7 +6,7 @@
  * model chat.
  */
 
-import type { Currency, TaskPriority } from "@/types";
+import type { AccountKind, Currency, TaskPriority } from "@/types";
 
 const DAY_MS = 86_400_000;
 
@@ -26,7 +26,16 @@ export type AiAction =
       category: string;
       currency: Currency;
     }
-  | { kind: "note"; title: string; content: string };
+  | { kind: "note"; title: string; content: string }
+  | {
+      kind: "savingsGoal";
+      name: string;
+      target: number;
+      saved: number;
+      currency: Currency;
+      deadline?: number;
+    }
+  | { kind: "account"; name: string; accountKind: AccountKind; currency: Currency; balance: number };
 
 /** Quick one-line confirmation shown in the chat bubble. */
 export function describeAction(action: AiAction): string {
@@ -39,6 +48,10 @@ export function describeAction(action: AiAction): string {
       return `${action.label} · ${action.amount} ${action.currency} (${action.category})`;
     case "note":
       return `Note: ${action.title}`;
+    case "savingsGoal":
+      return `${action.name} · target ${action.target} ${action.currency}`;
+    case "account":
+      return `${action.name} · ${action.balance} ${action.currency} (${action.accountKind})`;
   }
 }
 
@@ -176,6 +189,62 @@ export function enrichTaskDescription(title: string): string {
   return "Break it into small steps and knock out the first one today.";
 }
 
+/** Map a label to the closest account kind. */
+function guessAccountKind(name: string): AccountKind {
+  const n = name.toLowerCase();
+  if (/credit|visa|mastercard|amex/i.test(n)) return "credit";
+  if (/debit|atm|checking/i.test(n)) return "debit";
+  if (/wallet|gcash|maya|paymaya|coins|shopee/i.test(n)) return "e-wallet";
+  if (/savings|passbook/i.test(n)) return "savings";
+  if (/\bcash\b|efectivo/i.test(n)) return "cash";
+  return "other";
+}
+
+/** Parse a savings-goal phrase: name + optional target/saved amounts. */
+function parseSavingsGoal(text: string, defaultCurrency: Currency): {
+  name: string;
+  target: number;
+  saved: number;
+  currency: Currency;
+} | null {
+  const targetMatch = text.match(/target\s+(\d+(?:\.\d+)?)/i);
+  const savedMatch = text.match(/saved\s+(\d+(?:\.\d+)?)/i);
+  const nums = [...text.matchAll(/\d+(?:\.\d+)?/g)].map((m) => Number(m[0]));
+  const target = targetMatch ? Number(targetMatch[1]) : nums.length ? nums[nums.length - 1]! : 0;
+  const saved = savedMatch ? Number(savedMatch[1]) : 0;
+  const currency = guessCurrency(text, defaultCurrency);
+  const name = cleanTitle(
+    text
+      .replace(/target\s+\d+(?:\.\d+)?/gi, " ")
+      .replace(/saved\s+\d+(?:\.\d+)?/gi, " ")
+      .replace(/\d+(?:\.\d+)?/g, " ")
+      .replace(/[\$,€¥₱]/g, " ")
+      .replace(/php|usd|eur|jpy|peso|dollars|euros|yen/gi, " ")
+      .replace(/\s+/g, " "),
+  );
+  if (!name || !Number.isFinite(target) || target <= 0) return null;
+  return { name, target, saved, currency };
+}
+
+/** Parse an account phrase: name + balance + guessed kind. */
+function parseAccount(text: string, defaultCurrency: Currency): {
+  name: string;
+  accountKind: AccountKind;
+  currency: Currency;
+  balance: number;
+} | null {
+  const parsed = parseAmount(text, defaultCurrency);
+  if (!parsed) return null;
+  const name = cleanTitle(parsed.label);
+  if (!name) return null;
+  return {
+    name,
+    accountKind: guessAccountKind(name),
+    currency: parsed.currency,
+    balance: parsed.amount,
+  };
+}
+
 export function parseAiAction(text: string, defaultCurrency: Currency = "PHP", now = Date.now()): AiAction | null {
   const input = text.trim();
   if (!input) return null;
@@ -185,6 +254,20 @@ export function parseAiAction(text: string, defaultCurrency: Currency = "PHP", n
   if (m) {
     const [title, content] = splitTitleContent(cleanTitle(m[1]!));
     return { kind: "note", title, content };
+  }
+
+  // ── Savings goal ──────────────────────────────────────────
+  m = input.match(/^(?:add|create|set|start)\s+(?:a\s+)?(?:savings?\s+goal|goal)\s*:?\s+(.+)$/i);
+  if (m) {
+    const goal = parseSavingsGoal(m[1]!, defaultCurrency);
+    if (goal) return { kind: "savingsGoal", ...goal };
+  }
+
+  // ── Account / card / bank ─────────────────────────────────
+  m = input.match(/^(?:add|create)\s+(?:an?\s+)?(?:account|card|bank|wallet|e-?wallet)\s*:?\s+(.+)$/i);
+  if (m) {
+    const account = parseAccount(m[1]!, defaultCurrency);
+    if (account) return { kind: "account", ...account };
   }
 
   // ── Task ──────────────────────────────────────────────────
