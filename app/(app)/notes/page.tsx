@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { FileText, FolderDown, FolderUp, Plug, Plus, Star } from "lucide-react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { FileText, FolderDown, FolderUp, Plug, Plus, Search, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
@@ -31,11 +32,51 @@ function snippet(content: string, max = 90): string {
   return oneLine.length > max ? `${oneLine.slice(0, max)}…` : oneLine;
 }
 
+interface NoteRow {
+  note: Note;
+  snippet: string;
+  updatedLabel: string;
+}
+
+/** Memoized list row — only re-renders when its own note changes. */
+const NoteListItem = memo(function NoteListItem({
+  row,
+  active,
+  onSelect,
+}: {
+  row: NoteRow;
+  active: boolean;
+  onSelect: (id: string) => void;
+}) {
+  const n = row.note;
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(n.id)}
+      className={cn(
+        "hover:bg-surface-2/60 flex w-full flex-col gap-0.5 rounded-lg px-3 py-2 text-left transition-colors",
+        active && "bg-surface-2",
+      )}
+    >
+      <span className="text-foreground flex items-center gap-1.5 text-sm font-medium">
+        {n.favorite ? <Star className="text-accent size-3 shrink-0 fill-current" /> : null}
+        <span className="truncate">{n.title || "Untitled"}</span>
+      </span>
+      {row.snippet ? <span className="text-muted truncate text-xs">{row.snippet}</span> : null}
+      <span className="text-muted text-[11px]">{row.updatedLabel}</span>
+    </button>
+  );
+});
+
+const PAGE_SIZE = 100;
+
 export default function NotesPage() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [folder, setFolder] = useState("all");
+  const [query, setQuery] = useState("");
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<Note | null>(null);
   const [importing, setImporting] = useState(false);
@@ -66,14 +107,47 @@ export default function NotesPage() {
 
   const folders = useMemo(() => noteFolders(notes), [notes]);
 
+  const folderCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const n of notes) counts.set(n.folder, (counts.get(n.folder) ?? 0) + 1);
+    return counts;
+  }, [notes]);
+
+  const favoritesCount = useMemo(() => notes.filter((n) => n.favorite).length, [notes]);
+
   const filtered = useMemo(() => {
-    const list = [...notes].sort((a, b) => b.updatedAt - a.updatedAt);
-    if (folder === "favorites") return list.filter((n) => n.favorite);
-    if (folder !== "all") return list.filter((n) => n.folder === folder);
-    return list;
-  }, [notes, folder]);
+    const q = query.trim().toLowerCase();
+    const list = notes
+      .filter((n) => {
+        if (folder === "favorites" && !n.favorite) return false;
+        if (folder !== "all" && folder !== "favorites" && n.folder !== folder) return false;
+        if (q) {
+          const hay = `${n.title} ${n.content} ${n.folder} ${n.tags.join(" ")}`.toLowerCase();
+          if (!hay.includes(q)) return false;
+        }
+        return true;
+      })
+      .sort((a, b) => b.updatedAt - a.updatedAt);
+    return list.map((n) => ({
+      note: n,
+      snippet: n.content ? snippet(n.content) : "",
+      updatedLabel: relativeTime(n.updatedAt),
+    }));
+  }, [notes, folder, query]);
+
+  const visible = filtered.slice(0, visibleCount);
 
   const active = notes.find((n) => n.id === activeId) ?? null;
+
+  function changeFolder(f: string) {
+    setFolder(f);
+    setVisibleCount(PAGE_SIZE);
+  }
+
+  function changeQuery(v: string) {
+    setQuery(v);
+    setVisibleCount(PAGE_SIZE);
+  }
 
   async function createNote(template: NoteTemplate) {
     const note = newNoteFromTemplate(template);
@@ -217,19 +291,15 @@ export default function NotesPage() {
             active ? "hidden md:flex" : "flex",
           )}
         >
-          <nav className="flex gap-1 overflow-x-auto p-2 md:flex-col md:overflow-x-visible">
+          <nav className="flex gap-1 overflow-x-auto p-2 md:max-h-44 md:flex-col md:overflow-y-auto md:overflow-x-visible">
             {[
               { id: "all", label: "All notes", count: notes.length },
-              {
-                id: "favorites",
-                label: "Favorites",
-                count: notes.filter((n) => n.favorite).length,
-              },
+              { id: "favorites", label: "Favorites", count: favoritesCount },
             ].map((f) => (
               <button
                 key={f.id}
                 type="button"
-                onClick={() => setFolder(f.id)}
+                onClick={() => changeFolder(f.id)}
                 className={cn(
                   "text-muted hover:text-foreground flex shrink-0 items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm transition-colors",
                   folder === f.id && "bg-surface-2 text-foreground font-medium",
@@ -244,20 +314,31 @@ export default function NotesPage() {
                 <button
                   key={f}
                   type="button"
-                  onClick={() => setFolder(f)}
+                  onClick={() => changeFolder(f)}
                   className={cn(
                     "text-muted hover:text-foreground flex shrink-0 items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm transition-colors",
                     folder === f && "bg-surface-2 text-foreground font-medium",
                   )}
                 >
                   {f}
-                  <span className="text-muted text-xs">
-                    {notes.filter((n) => n.folder === f).length}
-                  </span>
+                  <span className="text-muted text-xs">{folderCounts.get(f) ?? 0}</span>
                 </button>
               ) : null,
             )}
           </nav>
+
+          <div className="border-border border-t p-2">
+            <div className="relative">
+              <Search className="text-muted pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
+              <Input
+                value={query}
+                onChange={(e) => changeQuery(e.target.value)}
+                placeholder="Search notes…"
+                className="pl-8"
+                aria-label="Search notes"
+              />
+            </div>
+          </div>
 
           <div className="border-border min-h-0 flex-1 overflow-y-auto border-t">
             {loading ? (
@@ -266,32 +347,29 @@ export default function NotesPage() {
                   <Skeleton key={i} className="h-14 w-full" />
                 ))}
               </div>
-            ) : filtered.length === 0 ? (
-              <p className="text-muted p-4 text-sm">No notes here yet.</p>
+            ) : visible.length === 0 ? (
+              <p className="text-muted p-4 text-sm">
+                {query ? "No notes match your search." : "No notes here yet."}
+              </p>
             ) : (
               <div className="p-2">
-                {filtered.map((n) => (
-                  <button
-                    key={n.id}
-                    type="button"
-                    onClick={() => setActiveId(n.id)}
-                    className={cn(
-                      "hover:bg-surface-2/60 flex w-full flex-col gap-0.5 rounded-lg px-3 py-2 text-left transition-colors",
-                      n.id === activeId && "bg-surface-2",
-                    )}
-                  >
-                    <span className="text-foreground flex items-center gap-1.5 text-sm font-medium">
-                      {n.favorite ? (
-                        <Star className="text-accent size-3 shrink-0 fill-current" />
-                      ) : null}
-                      <span className="truncate">{n.title || "Untitled"}</span>
-                    </span>
-                    <span className="text-muted truncate text-xs">
-                      {snippet(n.content) || "Empty note"}
-                    </span>
-                    <span className="text-muted text-[11px]">{relativeTime(n.updatedAt)}</span>
-                  </button>
+                {visible.map((row) => (
+                  <NoteListItem
+                    key={row.note.id}
+                    row={row}
+                    active={row.note.id === activeId}
+                    onSelect={setActiveId}
+                  />
                 ))}
+                {filtered.length > visibleCount ? (
+                  <button
+                    type="button"
+                    onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
+                    className="text-muted hover:text-foreground hover:bg-surface-2/60 w-full rounded-lg px-3 py-2 text-center text-xs transition-colors"
+                  >
+                    Show {filtered.length - visibleCount} more
+                  </button>
+                ) : null}
               </div>
             )}
           </div>

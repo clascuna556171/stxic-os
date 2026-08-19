@@ -1,21 +1,29 @@
 import { describe, expect, it } from "vitest";
-import { describeAction, parseAiAction } from "@/lib/ai/actions";
+import { describeAction, enrichTaskDescription, parseAiAction } from "@/lib/ai/actions";
 
 const NOW = new Date(2026, 7, 19, 12, 0, 0).getTime();
 
 describe("parseAiAction — tasks", () => {
   it("add task with a colon", () => {
-    expect(parseAiAction("add task: Go to the gym", "PHP", NOW)).toEqual({
+    const action = parseAiAction("add task: Go to the gym", "PHP", NOW);
+    expect(action).toMatchObject({
       kind: "task",
       title: "Go to the gym",
       priority: "P2",
-      dueDate: undefined,
     });
+    expect(action).not.toBeNull();
   });
 
   it("handles 'Add a new task like: …'", () => {
     const action = parseAiAction("Add a new task like: Go to the gym", "PHP", NOW);
     expect(action).toMatchObject({ kind: "task", title: "Go to the gym" });
+  });
+
+  it("strips quotes around the title", () => {
+    expect(parseAiAction("Add new task called 'Update UI'", "PHP", NOW)).toMatchObject({
+      kind: "task",
+      title: "Update UI",
+    });
   });
 
   it("remind me to …", () => {
@@ -133,6 +141,18 @@ describe("parseAiAction — non-actions", () => {
     expect(parseAiAction("what's the weather like?", "PHP", NOW)).toBeNull();
     expect(parseAiAction("hello", "PHP", NOW)).toBeNull();
     expect(parseAiAction("", "PHP", NOW)).toBeNull();
+  });
+});
+
+describe("enrichTaskDescription", () => {
+  it("adds a small, useful detail for common task topics", () => {
+    expect(enrichTaskDescription("Update UI")).toContain("UI");
+    expect(enrichTaskDescription("Fix the crash")).toContain("Reproduce");
+    expect(enrichTaskDescription("Study for the exam")).toContain("notes");
+  });
+
+  it("falls back to a generic first-step hint", () => {
+    expect(enrichTaskDescription("Whatever")).toContain("small steps");
   });
 });
 

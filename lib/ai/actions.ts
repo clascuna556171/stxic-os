@@ -11,7 +11,7 @@ import type { Currency, TaskPriority } from "@/types";
 const DAY_MS = 86_400_000;
 
 export type AiAction =
-  | { kind: "task"; title: string; priority: TaskPriority; dueDate?: number }
+  | { kind: "task"; title: string; priority: TaskPriority; dueDate?: number; description: string }
   | {
       kind: "income";
       label: string;
@@ -150,8 +150,30 @@ function cleanTitle(title: string): string {
   return title
     .replace(/^(?:like\s*:?\s*|named\s+|called\s+)/i, "")
     .replace(/\s+/g, " ")
-    .replace(/^[\s:.,\-]+|[\s:.,\-]+$/g, "")
+    .replace(/^[\s:.,\-'"“”‘’]+|[\s:.,\-'"“”‘’]+$/g, "")
     .trim();
+}
+
+/** Small, useful starting detail for an auto-created task. */
+export function enrichTaskDescription(title: string): string {
+  const t = title.toLowerCase();
+  if (/ui|design|interface|frontend|layout|styl|theme|button|widget/i.test(t))
+    return "Polish the UI: sketch the change, implement it, then review for consistency across screens.";
+  if (/bug|fix|error|issue|broken|crash|buggy/i.test(t))
+    return "Reproduce the issue, isolate the cause, apply the fix, then verify nothing else broke.";
+  if (/study|read|review|exam|lecture|homework|notes|revise/i.test(t))
+    return "Skim the key points, take notes, then self-quiz to make sure it sticks.";
+  if (/email|message|reply|respond|inbox/i.test(t))
+    return "Draft a short, clear message, send it, then follow up on anything pending.";
+  if (/meeting|call|standup|sync/i.test(t))
+    return "List the talking points, run the meeting, then summarize the next steps.";
+  if (/buy|groceries|shopping|errand|order/i.test(t))
+    return "Write the list, compare options, and double-check the total before paying.";
+  if (/clean|tidy|organize|declutter|sort/i.test(t))
+    return "Do the first small pass now, then finish the rest in one focused go.";
+  if (/code|refactor|implement|build|deploy|feature|api/i.test(t))
+    return "Scope it small, write the code, test it, then ship and review.";
+  return "Break it into small steps and knock out the first one today.";
 }
 
 export function parseAiAction(text: string, defaultCurrency: Currency = "PHP", now = Date.now()): AiAction | null {
@@ -189,7 +211,7 @@ export function parseAiAction(text: string, defaultCurrency: Currency = "PHP", n
     if (due) title = due.cleaned;
     title = cleanTitle(title);
     if (!title) return null;
-    return { kind: "task", title, priority, dueDate: due?.due };
+    return { kind: "task", title, priority, dueDate: due?.due, description: enrichTaskDescription(title) };
   }
 
   // ── Expense ───────────────────────────────────────────────

@@ -108,6 +108,7 @@ export default function AiChatPage() {
             const item: TaskItem = {
               id: crypto.randomUUID(),
               title: action.title,
+              description: action.description,
               status: "todo",
               priority: action.priority,
               type: "task",
