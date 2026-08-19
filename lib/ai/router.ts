@@ -39,7 +39,7 @@ export async function chat(messages: ChatMessage[], opts: ChatOptions = {}): Pro
   for (const provider of providers) {
     try {
       const signal = timeoutSignal(opts.signal);
-      const common = { temperature: opts.temperature, signal };
+      const common = { temperature: opts.temperature, reasoning: opts.reasoning, signal };
       const text =
         provider === "groq" ? await chatGroq(msgs, common) : await chatOllama(msgs, common);
       return { text, provider, fallback: false };
@@ -66,7 +66,7 @@ export async function* streamChat(
     lastProvider = provider;
     try {
       const signal = timeoutSignal(opts.signal);
-      const common = { temperature: opts.temperature, signal };
+      const common = { temperature: opts.temperature, reasoning: opts.reasoning, signal };
       const stream = provider === "groq" ? streamGroq(msgs, common) : streamOllama(msgs, common);
       for await (const text of stream) {
         sawDelta = true;

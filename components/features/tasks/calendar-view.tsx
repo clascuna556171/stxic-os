@@ -148,12 +148,17 @@ export function CalendarView({ tasks, onEdit, onAdd }: CalendarViewProps) {
               >
                 <span
                   className={cn(
-                    "text-foreground text-sm font-medium",
+                    "text-foreground break-words text-sm font-medium",
                     t.status === "done" && "text-muted line-through",
                   )}
                 >
                   {t.title || "Untitled task"}
                 </span>
+                {t.description ? (
+                  <span className="text-muted break-words whitespace-pre-wrap text-xs">
+                    {t.description}
+                  </span>
+                ) : null}
                 <span className="flex items-center gap-2">
                   <PriorityBadge priority={t.priority} />
                   {isOverdue(t) ? <span className="text-danger text-xs">Overdue</span> : null}

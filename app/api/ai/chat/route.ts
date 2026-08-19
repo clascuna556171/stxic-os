@@ -21,9 +21,10 @@ export async function POST(request: Request) {
     return new Response("Invalid JSON", { status: 400 });
   }
 
-  const { messages, provider } = (body ?? {}) as {
+  const { messages, provider, reasoning } = (body ?? {}) as {
     messages?: unknown;
     provider?: unknown;
+    reasoning?: unknown;
   };
 
   if (!Array.isArray(messages) || messages.length === 0) {
@@ -43,6 +44,8 @@ export async function POST(request: Request) {
       ? (provider as AiProvider)
       : "auto";
 
+  const resolvedReasoning: "none" | "default" = reasoning === "default" ? "default" : "none";
+
   const encoder = new TextEncoder();
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
@@ -50,7 +53,10 @@ export async function POST(request: Request) {
         controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
       };
       try {
-        for await (const event of streamChat(sanitized, { provider: resolvedProvider })) {
+        for await (const event of streamChat(sanitized, {
+          provider: resolvedProvider,
+          reasoning: resolvedReasoning,
+        })) {
           send(event);
         }
       } catch (error) {

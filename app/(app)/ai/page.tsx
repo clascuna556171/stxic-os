@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { Check, Send, Sparkles, Square, Undo2 } from "lucide-react";
+import { Brain, Check, Send, Sparkles, Square, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/toaster";
@@ -49,6 +49,7 @@ export default function AiChatPage() {
   const [messages, setMessages] = useState<UiMessage[]>([]);
   const [input, setInput] = useState("");
   const [provider, setProvider] = useState<AiProvider>("auto");
+  const [reasoning, setReasoning] = useState(false);
   const [streaming, setStreaming] = useState(false);
   const [streamingId, setStreamingId] = useState<string | null>(null);
   const [defaultCurrency, setDefaultCurrency] = useState<Currency>("PHP");
@@ -221,7 +222,7 @@ export default function AiChatPage() {
           toast({ title: "Chat error", description: err, variant: "danger" });
         },
       },
-      controller.signal,
+      { signal: controller.signal, reasoning: reasoning ? "default" : "none" },
     );
   }
 
@@ -239,7 +240,7 @@ export default function AiChatPage() {
           <h2 className="text-foreground text-xl font-semibold tracking-tight">AI chat</h2>
           <p className="text-muted text-sm">Local Ollama first, Groq cloud fallback.</p>
         </div>
-        <div className="flex gap-1">
+        <div className="flex items-center gap-1">
           {PROVIDERS.map((p) => (
             <button
               key={p.id}
@@ -253,6 +254,20 @@ export default function AiChatPage() {
               {p.label}
             </button>
           ))}
+          <span className="bg-border mx-1 h-4 w-px" aria-hidden />
+          <button
+            type="button"
+            onClick={() => setReasoning((r) => !r)}
+            aria-pressed={reasoning}
+            title={reasoning ? "Thinking on — show the model's reasoning" : "Thinking off — fastest replies"}
+            aria-label="Toggle thinking"
+            className={cn(
+              "text-muted hover:text-foreground rounded-lg p-1.5 transition-colors",
+              reasoning && "bg-surface-2 text-accent",
+            )}
+          >
+            <Brain className="size-4" />
+          </button>
         </div>
       </header>
 

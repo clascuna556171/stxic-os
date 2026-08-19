@@ -21,6 +21,12 @@ export interface ChatOptions {
   temperature?: number;
   /** Optional system prompt to prepend. */
   system?: string;
+  /**
+   * Reasoning effort for Qwen 3.6 on Groq. `none` (default) returns only the
+   * final answer; `default` lets the model think (reasoning is stripped from
+   * the stream either way).
+   */
+  reasoning?: "none" | "default";
   signal?: AbortSignal;
 }
 

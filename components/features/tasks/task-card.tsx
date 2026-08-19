@@ -28,7 +28,7 @@ export function TaskCard({ task, onEdit }: { task: TaskItem; onEdit: (t: TaskIte
         <button type="button" onClick={() => onEdit(task)} className="min-w-0 flex-1 text-left">
           <span
             className={cn(
-              "text-foreground block truncate text-sm font-medium",
+              "text-foreground block break-words text-sm font-medium",
               task.status === "done" && "text-muted line-through",
             )}
           >
@@ -46,7 +46,7 @@ export function TaskCard({ task, onEdit }: { task: TaskItem; onEdit: (t: TaskIte
       </div>
 
       {task.description ? (
-        <p className="text-muted line-clamp-2 text-xs">{task.description}</p>
+        <p className="text-muted break-words whitespace-pre-wrap text-xs">{task.description}</p>
       ) : null}
 
       <div className="flex items-center justify-between">

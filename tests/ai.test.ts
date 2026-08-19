@@ -8,6 +8,7 @@ import {
 import { CANNED_FALLBACK, resolveProvider } from "@/lib/ai/config";
 import { chat, streamChat } from "@/lib/ai/router";
 import { parseSseLine } from "@/lib/ai/client";
+import { stripThink } from "@/lib/ai/groq";
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -109,5 +110,19 @@ describe("parseSseLine", () => {
     expect(parseSseLine("event: message")).toBeNull();
     expect(parseSseLine("data: not json")).toBeNull();
     expect(parseSseLine('data: {"nope":1}')).toBeNull();
+  });
+});
+
+describe("stripThink", () => {
+  it("removes <think> reasoning blocks", () => {
+    expect(stripThink("<think>Let me reason…</think>Answer.")).toBe("Answer.");
+  });
+
+  it("keeps answers without thinking", () => {
+    expect(stripThink("Just an answer.")).toBe("Just an answer.");
+  });
+
+  it("handles a self-closing think tag", () => {
+    expect(stripThink("<think/>Done.")).toBe("Done.");
   });
 });

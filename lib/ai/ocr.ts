@@ -43,6 +43,7 @@ export async function ocrExtract(imageDataUrl: string): Promise<OcrResult> {
       model,
       messages: buildOcrMessages(imageDataUrl, ocrExtractPrompt()),
       temperature: 0.1,
+      reasoning_effort: "none",
     }),
   });
   if (!res.ok) {

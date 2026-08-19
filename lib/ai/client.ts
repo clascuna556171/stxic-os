@@ -25,13 +25,13 @@ export function parseSseLine(line: string): ChatStreamEvent | null {
 export async function* requestAiStream(
   messages: ChatMessage[],
   provider: AiProvider,
-  signal?: AbortSignal,
+  opts: { reasoning?: "none" | "default"; signal?: AbortSignal } = {},
 ): AsyncGenerator<ChatStreamEvent> {
   const res = await fetch("/api/ai/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ messages, provider }),
-    signal,
+    body: JSON.stringify({ messages, provider, reasoning: opts.reasoning ?? "none" }),
+    signal: opts.signal,
   });
 
   if (!res.ok) {
@@ -71,10 +71,10 @@ export async function streamAiChat(
   messages: ChatMessage[],
   provider: AiProvider,
   handlers: StreamHandlers,
-  signal?: AbortSignal,
+  opts: { reasoning?: "none" | "default"; signal?: AbortSignal } = {},
 ): Promise<void> {
   try {
-    for await (const event of requestAiStream(messages, provider, signal)) {
+    for await (const event of requestAiStream(messages, provider, opts)) {
       if (event.type === "delta" && event.text) handlers.onDelta?.(event.text, event.provider);
       else if (event.type === "done") handlers.onDone?.(event);
       else if (event.type === "error") handlers.onError?.(event.error ?? "Stream error");

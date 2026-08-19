@@ -9,7 +9,15 @@ const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 
 export interface ProviderCallOpts {
   temperature?: number;
+  reasoning?: "none" | "default";
   signal?: AbortSignal;
+}
+
+const THINK_RE = /<think>[\s\S]*?<\/think>|<think\/>/g;
+
+/** Strip the model's `<think>…</think>` reasoning blocks from text. */
+export function stripThink(text: string): string {
+  return text.replace(THINK_RE, "").trim();
 }
 
 async function* readSse(body: ReadableStream<Uint8Array>): AsyncGenerator<string> {
@@ -29,15 +37,35 @@ async function* readSse(body: ReadableStream<Uint8Array>): AsyncGenerator<string
       if (payload === "[DONE]") return;
       try {
         const json = JSON.parse(payload) as {
-          choices?: { delta?: { content?: string } }[];
+          choices?: { delta?: { content?: string; reasoning_content?: string } }[];
         };
         const text = json.choices?.[0]?.delta?.content;
-        if (text) yield text;
+        if (text) {
+          const clean = stripThink(text);
+          if (clean) yield clean;
+        }
       } catch {
         // ignore malformed SSE lines
       }
     }
   }
+}
+
+function groqBody(
+  model: string,
+  messages: ChatMessage[],
+  opts: ProviderCallOpts,
+  stream: boolean,
+) {
+  return {
+    model,
+    messages,
+    stream,
+    temperature: opts.temperature ?? 0.7,
+    // Qwen 3.6: "none" disables reasoning tokens entirely; "default" keeps
+    // them, but stripThink already removes any leaked <think> blocks.
+    reasoning_effort: opts.reasoning ?? "none",
+  };
 }
 
 export async function chatGroq(
@@ -49,12 +77,7 @@ export async function chatGroq(
   const res = await fetch(GROQ_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify({
-      model,
-      messages,
-      stream: false,
-      temperature: opts.temperature ?? 0.7,
-    }),
+    body: JSON.stringify(groqBody(model, messages, opts, false)),
     signal: opts.signal,
   });
   if (!res.ok) {
@@ -62,7 +85,7 @@ export async function chatGroq(
     throw new Error(`Groq ${res.status}: ${text.slice(0, 200)}`);
   }
   const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
-  return json.choices?.[0]?.message?.content ?? "";
+  return stripThink(json.choices?.[0]?.message?.content ?? "");
 }
 
 export async function* streamGroq(
@@ -74,12 +97,7 @@ export async function* streamGroq(
   const res = await fetch(GROQ_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify({
-      model,
-      messages,
-      stream: true,
-      temperature: opts.temperature ?? 0.7,
-    }),
+    body: JSON.stringify(groqBody(model, messages, opts, true)),
     signal: opts.signal,
   });
   if (!res.ok) {
