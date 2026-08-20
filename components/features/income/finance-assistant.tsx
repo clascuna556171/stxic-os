@@ -39,9 +39,11 @@ const FINANCE_KINDS: AiAction["kind"][] = ["income", "expense", "savingsGoal", "
 
 export function FinanceAssistant({
   defaultCurrency,
+  context,
   onChanged,
 }: {
   defaultCurrency: Currency;
+  context: string;
   onChanged: () => void;
 }) {
   const [messages, setMessages] = useState<Msg[]>([]);
@@ -170,7 +172,7 @@ export function FinanceAssistant({
     }
 
     const history: ChatMessage[] = [
-      { role: "system", content: financeAssistantPrompt() },
+      { role: "system", content: financeAssistantPrompt(context) },
       ...messages.map((m) => ({ role: m.role, content: m.content })),
       { role: "user", content: text },
     ];
@@ -193,7 +195,7 @@ export function FinanceAssistant({
           setMessages((m) =>
             m.map((x) =>
               x.id === assistantId && !x.content
-                ? { ...x, content: "Something went wrong.", streaming: true }
+                ? { ...x, content: "Something went wrong." }
                 : x,
             ),
           );
@@ -201,7 +203,7 @@ export function FinanceAssistant({
           toast({ title: "Chat error", description: err, variant: "danger" });
         },
       },
-      { signal: controller.signal, reasoning: "none" },
+      { signal: controller.signal, reasoning: "hidden" },
     );
   }
 

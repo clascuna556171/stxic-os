@@ -48,6 +48,7 @@ import {
 } from "@/lib/hydrate";
 import {
   accountTotalsByCurrency,
+  buildFinanceContext,
   goalPercent,
   groupByMonth,
   migrateIncomeToTransactions,
@@ -183,6 +184,11 @@ export default function IncomePage() {
 
   const accountTotals = useMemo(() => accountTotalsByCurrency(accounts), [accounts]);
   const savingsTotals = useMemo(() => savingsTotalsByCurrency(goals), [goals]);
+
+  const financeContext = useMemo(
+    () => buildFinanceContext(transactions, accounts, goals),
+    [transactions, accounts, goals],
+  );
 
   /** Re-fetch the ledger so the assistant's changes show up everywhere. */
   async function reload() {
@@ -741,7 +747,11 @@ export default function IncomePage() {
 
           {/* ── Assistant ────────────────────────────────────── */}
           <TabsContent value="assistant" className="flex flex-col gap-4">
-            <FinanceAssistant defaultCurrency={defaultCurrency} onChanged={() => void reload()} />
+            <FinanceAssistant
+              defaultCurrency={defaultCurrency}
+              context={financeContext}
+              onChanged={() => void reload()}
+            />
           </TabsContent>
         </Tabs>
       )}

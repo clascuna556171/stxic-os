@@ -190,3 +190,32 @@ export function migrateIncomeToTransactions(income: IncomeEntry[]): Transaction[
     updatedAt: e.updatedAt,
   }));
 }
+
+function perCurrencyText(txs: Transaction[], type?: Transaction["type"]): string {
+  const map = new Map<Currency, number>();
+  for (const t of txs) {
+    if (type && t.type !== type) continue;
+    map.set(t.currency, (map.get(t.currency) ?? 0) + t.amount);
+  }
+  const parts = [...map.entries()].map(([c, v]) => `${v} ${c}`);
+  return parts.length ? parts.join(", ") : "0";
+}
+
+/**
+ * A compact, model-friendly summary of the user's finances (used to ground
+ * the finance assistant's answers in real numbers). Pure + unit-tested.
+ */
+export function buildFinanceContext(
+  txs: Transaction[],
+  accounts: FinanceAccount[],
+  goals: SavingsGoal[],
+): string {
+  const month = monthKey(Date.now());
+  return [
+    `This month (${month}): income ${perCurrencyText(txs.filter((t) => monthKey(t.date) === month), "income")}, expenses ${perCurrencyText(txs.filter((t) => monthKey(t.date) === month), "expense")}.`,
+    `All time: income ${perCurrencyText(txs, "income")}, expenses ${perCurrencyText(txs, "expense")}.`,
+    `Accounts: ${accounts.length ? accounts.map((a) => `${a.name} ${a.balance} ${a.currency}`).join(", ") : "none"}.`,
+    `Savings goals: ${goals.length ? goals.map((g) => `${g.name} ${g.saved}/${g.target} ${g.currency}`).join(", ") : "none"}.`,
+    `Transactions on file: ${txs.length}.`,
+  ].join("\n");
+}

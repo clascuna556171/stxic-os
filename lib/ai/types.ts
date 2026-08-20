@@ -22,11 +22,11 @@ export interface ChatOptions {
   /** Optional system prompt to prepend. */
   system?: string;
   /**
-   * Reasoning effort for Qwen 3.6 on Groq. `none` (default) returns only the
-   * final answer; `default` lets the model think (reasoning is stripped from
-   * the stream either way).
+   * Reasoning format for Qwen 3.6 on Groq. `hidden` (default) lets the model
+   * reason internally but returns only the final answer — better quality with
+   * no `<think>` output. `raw` exposes the reasoning steps in `<think>` tags.
    */
-  reasoning?: "none" | "default";
+  reasoning?: "hidden" | "raw";
   signal?: AbortSignal;
 }
 

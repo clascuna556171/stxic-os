@@ -9,7 +9,8 @@ const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 
 export interface ProviderCallOpts {
   temperature?: number;
-  reasoning?: "none" | "default";
+  /** `hidden` (default) returns only the final answer; `raw` keeps think tags. */
+  reasoning?: "hidden" | "raw";
   signal?: AbortSignal;
 }
 
@@ -20,7 +21,15 @@ export function stripThink(text: string): string {
   return text.replace(THINK_RE, "").trim();
 }
 
-async function* readSse(body: ReadableStream<Uint8Array>): AsyncGenerator<string> {
+/** When raw reasoning is requested, keep the think tags the user asked to see. */
+function cleanContent(text: string, reasoning: "hidden" | "raw" | undefined): string {
+  return reasoning === "raw" ? text.trim() : stripThink(text);
+}
+
+async function* readSse(
+  body: ReadableStream<Uint8Array>,
+  reasoning: "hidden" | "raw" | undefined,
+): AsyncGenerator<string> {
   const reader = body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
@@ -41,7 +50,7 @@ async function* readSse(body: ReadableStream<Uint8Array>): AsyncGenerator<string
         };
         const text = json.choices?.[0]?.delta?.content;
         if (text) {
-          const clean = stripThink(text);
+          const clean = cleanContent(text, reasoning);
           if (clean) yield clean;
         }
       } catch {
@@ -62,9 +71,9 @@ function groqBody(
     messages,
     stream,
     temperature: opts.temperature ?? 0.7,
-    // Qwen 3.6: "none" disables reasoning tokens entirely; "default" keeps
-    // them, but stripThink already removes any leaked <think> blocks.
-    reasoning_effort: opts.reasoning ?? "none",
+    // Qwen 3.6: "hidden" reasons internally but hides the thinking (clean,
+    // higher-quality answers); "raw" exposes it in <think> tags on purpose.
+    reasoning_format: opts.reasoning ?? "hidden",
   };
 }
 
@@ -85,7 +94,7 @@ export async function chatGroq(
     throw new Error(`Groq ${res.status}: ${text.slice(0, 200)}`);
   }
   const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
-  return stripThink(json.choices?.[0]?.message?.content ?? "");
+  return cleanContent(json.choices?.[0]?.message?.content ?? "", opts.reasoning);
 }
 
 export async function* streamGroq(
@@ -105,5 +114,5 @@ export async function* streamGroq(
     throw new Error(`Groq ${res.status}: ${text.slice(0, 200)}`);
   }
   if (!res.body) throw new Error("Groq stream empty");
-  yield* readSse(res.body);
+  yield* readSse(res.body, opts.reasoning);
 }

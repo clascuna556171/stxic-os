@@ -64,6 +64,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState("");
   const [autoLockMin, setAutoLockMin] = useState(5);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const userRef = useRef<User | null>(null);
+  /** uid of the user who is currently unlocked (PIN verified) on this device. */
+  const unlockedUid = useRef<string | null>(null);
 
   const clearTimer = useCallback(() => {
     if (timerRef.current) {
@@ -75,6 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const lock = useCallback(() => {
     if (demo) return;
     clearSessionKey();
+    unlockedUid.current = null;
     setLocked(true);
     clearTimer();
   }, [clearTimer, demo]);
@@ -91,6 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const unlock = useCallback(
     (key: CryptoKey) => {
       setSessionKey(key);
+      unlockedUid.current = userRef.current?.uid ?? null;
       setLocked(false);
       resetTimer(autoLockMin);
     },
@@ -99,6 +104,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(async () => {
     clearSessionKey();
+    unlockedUid.current = null;
     setLocked(false);
     clearTimer();
     await firebaseSignOut(getAuthClient());
@@ -111,6 +117,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Firebase auth state → session cookie + lock state.
   useEffect(() => {
     const unsub = onAuthStateChanged(getAuthClient(), async (u) => {
+      userRef.current = u;
       setUser(u);
       if (u) {
         // Establish the httpOnly session cookie. Every step is bounded by a
@@ -132,9 +139,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } catch (e) {
           if (!u.isAnonymous) {
             // Real user: surface the failure so the login page can retry
-            // instead of hanging with a disabled button.
+            // instead of hanging with a disabled button. Don't re-lock a user
+            // who is already unlocked on this device.
             setError((e as Error).message);
-            setLocked(true);
+            setLocked(unlockedUid.current !== u.uid);
             setSessionReady(true);
             setInitializing(false);
             return;
@@ -165,7 +173,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         setDemo(false);
-        setLocked(true);
+        // Once a user is unlocked (PIN verified), keep them unlocked through
+        // repeated auth-state events — otherwise they'd be sent back to /pin.
+        setLocked(unlockedUid.current !== u.uid);
         const settings = await withTimeout(getSettings(), 10_000, "Couldn't load settings").catch(
           () => undefined,
         );

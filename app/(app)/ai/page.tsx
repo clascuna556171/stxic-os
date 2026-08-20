@@ -262,7 +262,7 @@ export default function AiChatPage() {
           toast({ title: "Chat error", description: err, variant: "danger" });
         },
       },
-      { signal: controller.signal, reasoning: reasoning ? "default" : "none" },
+      { signal: controller.signal, reasoning: reasoning ? "raw" : "hidden" },
     );
   }
 
@@ -299,7 +299,7 @@ export default function AiChatPage() {
             type="button"
             onClick={() => setReasoning((r) => !r)}
             aria-pressed={reasoning}
-            title={reasoning ? "Thinking on — show the model's reasoning" : "Thinking off — fastest replies"}
+            title={reasoning ? "Thinking shown — replies may be slower" : "Thinking on, hidden — better answers"}
             aria-label="Toggle thinking"
             className={cn(
               "text-muted hover:text-foreground rounded-lg p-1.5 transition-colors",

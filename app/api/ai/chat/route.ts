@@ -44,7 +44,7 @@ export async function POST(request: Request) {
       ? (provider as AiProvider)
       : "auto";
 
-  const resolvedReasoning: "none" | "default" = reasoning === "default" ? "default" : "none";
+  const resolvedReasoning: "hidden" | "raw" = reasoning === "raw" ? "raw" : "hidden";
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream<Uint8Array>({

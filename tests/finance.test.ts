@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import type { FinanceAccount, IncomeEntry, SavingsGoal, Transaction } from "@/types";
 import {
   accountTotalsByCurrency,
+  buildFinanceContext,
   goalPercent,
   groupByMonth,
   migrateIncomeToTransactions,
@@ -193,5 +194,23 @@ describe("migrateIncomeToTransactions", () => {
       amount: 500,
       category: "Salary",
     });
+  });
+});
+
+describe("buildFinanceContext", () => {
+  it("summarizes income, expenses, accounts and goals for the model", () => {
+    const ctx = buildFinanceContext(
+      [
+        tx({ id: "a", type: "income", amount: 3000, date: new Date(2026, 7, 1).getTime() }),
+        tx({ id: "b", type: "expense", amount: 500, date: new Date(2026, 7, 2).getTime() }),
+      ],
+      [account({ name: "GCash", balance: 2500 })],
+      [goal({ name: "Fund", saved: 500, target: 1000 })],
+    );
+    expect(ctx).toContain("income 3000 PHP");
+    expect(ctx).toContain("expenses 500 PHP");
+    expect(ctx).toContain("GCash 2500 PHP");
+    expect(ctx).toContain("Fund 500/1000 PHP");
+    expect(ctx).toContain("Transactions on file: 2");
   });
 });
