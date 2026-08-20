@@ -16,14 +16,23 @@ export interface ProviderCallOpts {
 
 const THINK_RE = /<think>[\s\S]*?<\/think>|<think\/>/g;
 
-/** Strip the model's `<think>…</think>` reasoning blocks from text. */
+/** Strip the model's `<think>…</think>` reasoning blocks (final text path). */
 export function stripThink(text: string): string {
   return text.replace(THINK_RE, "").trim();
 }
 
+/**
+ * Strip think blocks WITHOUT trimming. Streaming deltas arrive as fragments
+ * (e.g. " world"); trimming each chunk would eat the spaces between words and
+ * produce run-together, unreadable text.
+ */
+export function stripThinkBlocks(text: string): string {
+  return text.replace(THINK_RE, "");
+}
+
 /** When raw reasoning is requested, keep the think tags the user asked to see. */
 function cleanContent(text: string, reasoning: "hidden" | "raw" | undefined): string {
-  return reasoning === "raw" ? text.trim() : stripThink(text);
+  return reasoning === "raw" ? text : stripThinkBlocks(text);
 }
 
 async function* readSse(

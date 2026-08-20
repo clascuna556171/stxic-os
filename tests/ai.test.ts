@@ -8,7 +8,7 @@ import {
 import { CANNED_FALLBACK, resolveProvider } from "@/lib/ai/config";
 import { chat, streamChat } from "@/lib/ai/router";
 import { parseSseLine } from "@/lib/ai/client";
-import { stripThink } from "@/lib/ai/groq";
+import { stripThink, stripThinkBlocks } from "@/lib/ai/groq";
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -124,5 +124,19 @@ describe("stripThink", () => {
 
   it("handles a self-closing think tag", () => {
     expect(stripThink("<think/>Done.")).toBe("Done.");
+  });
+});
+
+describe("stripThinkBlocks (streaming)", () => {
+  it("preserves spaces between streamed fragments", () => {
+    // Deltas are trimmed per-chunk in the OLD code, eating the leading space of
+    // " world" and yielding "Helloworld". stripThinkBlocks must NOT trim.
+    const chunks = ["Hello", " world", "!"];
+    const joined = chunks.map((c) => stripThinkBlocks(c)).join("");
+    expect(joined).toBe("Hello world!");
+  });
+
+  it("still removes think blocks when they leak into a fragment", () => {
+    expect(stripThinkBlocks("<think>x</think> plain")).toBe(" plain");
   });
 });
