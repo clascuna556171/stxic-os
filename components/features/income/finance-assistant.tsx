@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/toaster";
 import { describeAction, parseAiAction, type AiAction } from "@/lib/ai/actions";
+import { resolveSavingsTarget, savingsHint } from "@/lib/ai/savings";
 import { streamAiChat } from "@/lib/ai/client";
 import { financeAssistantPrompt } from "@/lib/ai/prompts";
 import {
@@ -32,18 +33,27 @@ interface Msg {
   id: string;
   role: "user" | "assistant";
   content: string;
-  action?: { kind: AiAction["kind"]; id: string };
+  /** Set when this message created/changed an item — enables Undo. */
+  action?: { kind: AiAction["kind"]; id: string; previousSaved?: number };
 }
 
-const FINANCE_KINDS: AiAction["kind"][] = ["income", "expense", "savingsGoal", "account"];
+const FINANCE_KINDS: AiAction["kind"][] = [
+  "income",
+  "expense",
+  "savingsGoal",
+  "account",
+  "addToSavings",
+];
 
 export function FinanceAssistant({
   defaultCurrency,
   context,
+  goals,
   onChanged,
 }: {
   defaultCurrency: Currency;
   context: string;
+  goals: SavingsGoal[];
   onChanged: () => void;
 }) {
   const [messages, setMessages] = useState<Msg[]>([]);
@@ -65,6 +75,30 @@ export function FinanceAssistant({
   async function undo(msg: Msg) {
     if (!msg.action) return;
     const { kind, id } = msg.action;
+
+    // Top-ups modify an existing goal — Undo restores the previous amount
+    // instead of deleting anything.
+    if (kind === "addToSavings") {
+      const goal = goals.find((g) => g.id === id);
+      if (!goal || msg.action.previousSaved == null) {
+        toast({ title: "Couldn't undo", description: "That goal no longer exists.", variant: "danger" });
+        return;
+      }
+      const res = await saveSavingsGoal({
+        ...goal,
+        saved: msg.action.previousSaved,
+        updatedAt: Date.now(),
+      });
+      if (res.ok) {
+        setMessages((m) => m.filter((x) => x.id !== msg.id));
+        toast({ title: "Undone", description: `${goal.name} restored to ${goal.currency} ${msg.action.previousSaved}.` });
+        onChanged();
+      } else {
+        toast({ title: "Couldn't undo", description: res.error, variant: "danger" });
+      }
+      return;
+    }
+
     const res =
       kind === "income" || kind === "expense"
         ? await deleteTransaction(id)
@@ -106,8 +140,37 @@ export function FinanceAssistant({
       void (async () => {
         let res: { ok: boolean; error?: string } | null = null;
         let createdId = "";
+        let described = describeAction(action);
+        let previousSaved: number | undefined;
         try {
-          if (action.kind === "income" || action.kind === "expense") {
+          if (action.kind === "addToSavings") {
+            const resolution = resolveSavingsTarget(action, text, goals);
+            if (resolution.status !== "ok") {
+              setMessages((m) =>
+                m.map((x) =>
+                  x.id === assistantId
+                    ? {
+                        ...x,
+                        content:
+                          resolution.status === "candidates"
+                            ? savingsHint(resolution.goals)
+                            : savingsHint([]),
+                      }
+                    : x,
+                ),
+              );
+              return;
+            }
+            const goal = resolution.goal;
+            previousSaved = goal.saved;
+            described = describeAction({ ...action, name: goal.name });
+            res = await saveSavingsGoal({
+              ...goal,
+              saved: Math.round((goal.saved + action.amount) * 100) / 100,
+              updatedAt: now,
+            });
+            createdId = goal.id;
+          } else if (action.kind === "income" || action.kind === "expense") {
             const item: Transaction = {
               id: crypto.randomUUID(),
               type: action.kind,
@@ -155,17 +218,25 @@ export function FinanceAssistant({
           setMessages((m) =>
             m.map((x) =>
               x.id === assistantId
-                ? { ...x, content: describeAction(action), action: { kind: action.kind, id: createdId } }
+                ? {
+                    ...x,
+                    content: described,
+                    action: { kind: action.kind, id: createdId, previousSaved },
+                  }
                 : x,
             ),
           );
-          toast({ title: `Added ${action.kind}`, description: describeAction(action), variant: "success" });
+          toast({
+            title: action.kind === "addToSavings" ? "Savings updated" : `Added ${action.kind}`,
+            description: described,
+            variant: "success",
+          });
           onChanged();
-        } else {
+        } else if (res) {
           setMessages((m) =>
             m.map((x) => (x.id === assistantId ? { ...x, content: "Couldn't create that." } : x)),
           );
-          toast({ title: "Action failed", description: res?.error ?? "Unknown error", variant: "danger" });
+          toast({ title: "Action failed", description: res.error ?? "Unknown error", variant: "danger" });
         }
       })();
       return;
@@ -219,7 +290,7 @@ export function FinanceAssistant({
       <CardHeader className="pb-2">
         <CardTitle>Finance assistant</CardTitle>
         <CardDescription>
-          Try “log expense lunch 250”, “record income 3000”, “add savings goal: new laptop target 60000”, or “add account: GCash 2500”.
+          Try “add 5k at the savings”, “log expense lunch 250”, “record income 3000”, “add savings goal: new laptop target 60000”, or “add account: GCash 2500”.
         </CardDescription>
       </CardHeader>
 

@@ -750,6 +750,7 @@ export default function IncomePage() {
             <FinanceAssistant
               defaultCurrency={defaultCurrency}
               context={financeContext}
+              goals={goals}
               onChanged={() => void reload()}
             />
           </TabsContent>

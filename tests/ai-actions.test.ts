@@ -178,6 +178,57 @@ describe("parseAiAction — accounts", () => {
   });
 });
 
+describe("parseAiAction — add to savings", () => {
+  it("parses 'Add 5k at the savings' with a k-suffix", () => {
+    expect(parseAiAction("Add 5k at the savings", "PHP", NOW)).toEqual({
+      kind: "addToSavings",
+      name: undefined,
+      amount: 5000,
+      currency: "PHP",
+    });
+  });
+
+  it("parses deposits into savings", () => {
+    expect(parseAiAction("deposit 2k into my savings", "PHP", NOW)).toMatchObject({
+      kind: "addToSavings",
+      amount: 2000,
+    });
+  });
+
+  it("captures an optional goal name", () => {
+    expect(parseAiAction("add 1.5k to savings for laptop", "PHP", NOW)).toEqual({
+      kind: "addToSavings",
+      name: "laptop",
+      amount: 1500,
+      currency: "PHP",
+    });
+  });
+
+  it("supports top-up phrasing with the amount last", () => {
+    expect(parseAiAction("top up savings with 500", "PHP", NOW)).toMatchObject({
+      kind: "addToSavings",
+      amount: 500,
+    });
+  });
+});
+
+describe("parseAiAction — k/m amounts everywhere", () => {
+  it("expands k in expenses", () => {
+    expect(parseAiAction("log expense lunch 1.2k", "PHP", NOW)).toMatchObject({
+      kind: "expense",
+      amount: 1200,
+      label: "lunch",
+    });
+  });
+
+  it("expands k in income", () => {
+    expect(parseAiAction("record income 3k tutoring", "PHP", NOW)).toMatchObject({
+      kind: "income",
+      amount: 3000,
+    });
+  });
+});
+
 describe("parseAiAction — non-actions", () => {
   it("returns null for plain chat", () => {
     expect(parseAiAction("what's the weather like?", "PHP", NOW)).toBeNull();

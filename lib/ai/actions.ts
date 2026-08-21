@@ -35,7 +35,8 @@ export type AiAction =
       currency: Currency;
       deadline?: number;
     }
-  | { kind: "account"; name: string; accountKind: AccountKind; currency: Currency; balance: number };
+  | { kind: "account"; name: string; accountKind: AccountKind; currency: Currency; balance: number }
+  | { kind: "addToSavings"; name?: string; amount: number; currency: Currency };
 
 /** Quick one-line confirmation shown in the chat bubble. */
 export function describeAction(action: AiAction): string {
@@ -52,6 +53,8 @@ export function describeAction(action: AiAction): string {
       return `${action.name} · target ${action.target} ${action.currency}`;
     case "account":
       return `${action.name} · ${action.balance} ${action.currency} (${action.accountKind})`;
+    case "addToSavings":
+      return `+${action.amount} ${action.currency} → ${action.name ?? "savings"}`;
   }
 }
 
@@ -96,19 +99,29 @@ interface Parsed {
   currency: Currency;
 }
 
+/** Numbers with an optional k/m suffix: "5k" → 5000, "2.5m" → 2500000. */
+const NUM_RE = /(\d+(?:\.\d+)?)([km])?/gi;
+
+function expandAmount(token: string): number {
+  const m = token.match(/^(\d+(?:\.\d+)?)([km])$/i);
+  if (!m) return Number(token);
+  const value = Number(m[1]);
+  return m[2]!.toLowerCase() === "k" ? value * 1000 : value * 1_000_000;
+}
+
 /** Pull `<amount> [currency]` out of a phrase; null when no amount found. */
 function parseAmount(text: string, fallbackCurrency: Currency): Parsed | null {
-  const matches = [...text.matchAll(/\d+(?:\.\d+)?/g)];
+  const matches = [...text.matchAll(NUM_RE)];
   if (matches.length === 0) return null;
   const last = matches[matches.length - 1]!;
-  const amount = Number(last[0]);
+  const amount = expandAmount(last[0]);
   if (!Number.isFinite(amount) || amount <= 0) return null;
   // Currency token: near the number (within ~12 chars) or anywhere in text.
   const around = text.slice(Math.max(0, last.index! - 4), last.index! + last[0].length + 12);
   const currency = guessCurrency(`${around} ${text}`, fallbackCurrency);
   // Label: strip amount, currency symbols/tokens, and filler words.
   const label = text
-    .replace(/\d+(?:\.\d+)?/g, " ")
+    .replace(/(\d+(?:\.\d+)?)([km])?/gi, " ")
     .replace(/[\$,€¥₱]/g, " ")
     .replace(/php|usd|eur|jpy|peso|dollars|euros|yen/gi, " ")
     .replace(/\b(on|for|at|from|towards?|about|a|an)\b/gi, " ")
@@ -207,17 +220,17 @@ function parseSavingsGoal(text: string, defaultCurrency: Currency): {
   saved: number;
   currency: Currency;
 } | null {
-  const targetMatch = text.match(/target\s+(\d+(?:\.\d+)?)/i);
-  const savedMatch = text.match(/saved\s+(\d+(?:\.\d+)?)/i);
-  const nums = [...text.matchAll(/\d+(?:\.\d+)?/g)].map((m) => Number(m[0]));
-  const target = targetMatch ? Number(targetMatch[1]) : nums.length ? nums[nums.length - 1]! : 0;
-  const saved = savedMatch ? Number(savedMatch[1]) : 0;
+  const targetMatch = text.match(/target\s+(\d+(?:\.\d+)?[km]?)/i);
+  const savedMatch = text.match(/saved\s+(\d+(?:\.\d+)?[km]?)/i);
+  const nums = [...text.matchAll(NUM_RE)].map((m) => expandAmount(m[0]));
+  const target = targetMatch ? expandAmount(targetMatch[1]!) : nums.length ? nums[nums.length - 1]! : 0;
+  const saved = savedMatch ? expandAmount(savedMatch[1]!) : 0;
   const currency = guessCurrency(text, defaultCurrency);
   const name = cleanTitle(
     text
-      .replace(/target\s+\d+(?:\.\d+)?/gi, " ")
-      .replace(/saved\s+\d+(?:\.\d+)?/gi, " ")
-      .replace(/\d+(?:\.\d+)?/g, " ")
+      .replace(/target\s+\d+(?:\.\d+)?[km]?/gi, " ")
+      .replace(/saved\s+\d+(?:\.\d+)?[km]?/gi, " ")
+      .replace(/(\d+(?:\.\d+)?)([km])?/gi, " ")
       .replace(/[\$,€¥₱]/g, " ")
       .replace(/php|usd|eur|jpy|peso|dollars|euros|yen/gi, " ")
       .replace(/\s+/g, " "),
@@ -261,6 +274,41 @@ export function parseAiAction(text: string, defaultCurrency: Currency = "PHP", n
   if (m) {
     const goal = parseSavingsGoal(m[1]!, defaultCurrency);
     if (goal) return { kind: "savingsGoal", ...goal };
+  }
+
+  // ── Add to savings (top up an existing goal) ──────────────
+  // Variant A: "add 5k at/to/into the savings [for X]"
+  // Variant B: "top up savings [with] 5k"
+  // Variant C: "add 5k to my emergency fund" (name resolved against goals later)
+  const topUpMatch =
+    input.match(
+      /^(?:add|put|deposit|save|move|transfer)\s+(?:an?\s+)?(\d+(?:\.\d+)?[km]?)\s+(?:to|into|at|in|towards?)\s+(?:the\s+|my\s+)?savings?(?:\s+goal)?(?:\s+(?:for\s+)?(.+))?$/i,
+    ) ??
+    input.match(
+      /^top\s*up\s+(?:the\s+|my\s+)?savings?(?:\s+goal)?(?:\s+(?:for\s+|with\s+|by\s+)(.+?))?\s*(?:with|by)?\s*:?\s*(\d+(?:\.\d+)?[km]?)$/i,
+    ) ??
+    input.match(
+      /^(?:add|put|deposit|move|transfer)\s+(\d+(?:\.\d+)?[km]?)\s+(?:to|into|at|in|towards?)\s+(?:the\s+|my\s+)?(.+)$/i,
+    );
+  if (topUpMatch) {
+    // Amount is the leading number for variants A/C, trailing for B — take the
+    // last number token of the whole match either way.
+    const amountToken = [...topUpMatch[0].matchAll(NUM_RE)].pop()?.[0];
+    if (!amountToken) return null;
+    const amount = expandAmount(amountToken);
+    if (!Number.isFinite(amount) || amount <= 0) return null;
+    // Variant B keeps its name in group 1 (group 2 is the amount); the others
+    // keep it in their final group.
+    const isTopUpFirst = /^top/i.test(input);
+    const rawName = (isTopUpFirst ? topUpMatch[1] : topUpMatch[topUpMatch.length - 1])?.trim() ?? "";
+    const name = rawName ? cleanTitle(rawName.replace(/^(?:for|with)\s+/i, "")) : "";
+    if (name.toLowerCase() === "tasks") return null; // let the task intent win
+    return {
+      kind: "addToSavings",
+      name: name || undefined,
+      amount: Math.round(amount * 100) / 100,
+      currency: guessCurrency(input, defaultCurrency),
+    };
   }
 
   // ── Account / card / bank ─────────────────────────────────

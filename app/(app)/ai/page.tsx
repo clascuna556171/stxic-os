@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/toaster";
 import { streamAiChat } from "@/lib/ai/client";
 import { describeAction, parseAiAction, type AiAction } from "@/lib/ai/actions";
+import { resolveSavingsTarget, savingsHint } from "@/lib/ai/savings";
 import { aiChatSystemPrompt } from "@/lib/ai/prompts";
 import {
   deleteAccount,
@@ -16,6 +17,7 @@ import {
   deleteTask,
   deleteTransaction,
   getSettings,
+  listSavingsGoals,
   saveAccount,
   saveNote,
   saveSavingsGoal,
@@ -46,7 +48,7 @@ interface UiMessage {
   provider?: string;
   fallback?: boolean;
   /** Set when this assistant message was created by an AI action, not the model. */
-  action?: { kind: AiAction["kind"]; id: string };
+  action?: { kind: AiAction["kind"]; id: string; previousSaved?: number };
 }
 
 export default function AiChatPage() {
@@ -80,6 +82,30 @@ export default function AiChatPage() {
   async function undoAction(msg: UiMessage) {
     if (!msg.action) return;
     const { kind, id } = msg.action;
+
+    // Top-ups modify an existing goal — Undo restores the previous amount.
+    if (kind === "addToSavings") {
+      if (msg.action.previousSaved == null) return;
+      const gRes = await listSavingsGoals();
+      const goal = gRes.ok ? gRes.data.find((g) => g.id === id) : undefined;
+      if (!goal) {
+        toast({ title: "Couldn't undo", description: "That goal no longer exists.", variant: "danger" });
+        return;
+      }
+      const res = await saveSavingsGoal({
+        ...goal,
+        saved: msg.action.previousSaved,
+        updatedAt: Date.now(),
+      });
+      if (res.ok) {
+        setMessages((m) => m.filter((x) => x.id !== msg.id));
+        toast({ title: "Undone", description: `${goal.name} restored to ${goal.currency} ${msg.action.previousSaved}.` });
+      } else {
+        toast({ title: "Couldn't undo", description: res.error, variant: "danger" });
+      }
+      return;
+    }
+
     const res =
       kind === "task"
         ? await deleteTask(id)
@@ -115,8 +141,39 @@ export default function AiChatPage() {
       void (async () => {
         let res: { ok: boolean; error?: string } | null = null;
         let createdId = "";
+        let described = describeAction(action);
+        let previousSaved: number | undefined;
         try {
-          if (action.kind === "task") {
+          if (action.kind === "addToSavings") {
+            const gRes = await listSavingsGoals();
+            const goals = gRes.ok ? gRes.data : [];
+            const resolution = resolveSavingsTarget(action, text, goals);
+            if (resolution.status !== "ok") {
+              setMessages((m) =>
+                m.map((msg) =>
+                  msg.id === assistantId
+                    ? {
+                        ...msg,
+                        content:
+                          resolution.status === "candidates"
+                            ? savingsHint(resolution.goals)
+                            : savingsHint([]),
+                      }
+                    : msg,
+                ),
+              );
+              return;
+            }
+            const goal = resolution.goal;
+            previousSaved = goal.saved;
+            described = describeAction({ ...action, name: goal.name });
+            res = await saveSavingsGoal({
+              ...goal,
+              saved: Math.round((goal.saved + action.amount) * 100) / 100,
+              updatedAt: now,
+            });
+            createdId = goal.id;
+          } else if (action.kind === "task") {
             const item: TaskItem = {
               id: crypto.randomUUID(),
               title: action.title,
@@ -196,12 +253,20 @@ export default function AiChatPage() {
           setMessages((m) =>
             m.map((msg) =>
               msg.id === assistantId
-                ? { ...msg, content: describeAction(action), action: { kind: action.kind, id: createdId } }
+                ? {
+                    ...msg,
+                    content: described,
+                    action: { kind: action.kind, id: createdId, previousSaved },
+                  }
                 : msg,
             ),
           );
-          toast({ title: `Added ${action.kind}`, description: describeAction(action), variant: "success" });
-        } else {
+          toast({
+            title: action.kind === "addToSavings" ? "Savings updated" : `Added ${action.kind}`,
+            description: described,
+            variant: "success",
+          });
+        } else if (res) {
           setMessages((m) =>
             m.map((msg) =>
               msg.id === assistantId ? { ...msg, content: "Couldn't create that.", fallback: true } : msg,
