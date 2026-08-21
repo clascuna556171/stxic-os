@@ -1,7 +1,7 @@
 /**
  * Resolve which savings goal a natural-language top-up ("add 5k at the
  * savings", "add 1k to my emergency fund") refers to. Pure + unit-tested;
- * used by both AI chat surfaces.
+ * used by both AI chat surfaces and action executors.
  */
 
 import type { SavingsGoal } from "@/types";
@@ -11,7 +11,7 @@ type TopUp = Extract<AiAction, { kind: "addToSavings" }>;
 
 export type SavingsResolution =
   | { status: "ok"; goal: SavingsGoal }
-  | { status: "none" }
+  | { status: "none"; defaultName?: string }
   | { status: "candidates"; goals: SavingsGoal[] };
 
 export function resolveSavingsTarget(
@@ -19,7 +19,9 @@ export function resolveSavingsTarget(
   text: string,
   goals: SavingsGoal[],
 ): SavingsResolution {
-  if (goals.length === 0) return { status: "none" };
+  if (goals.length === 0) {
+    return { status: "none", defaultName: topUp.name || "General Savings" };
+  }
 
   // 1) Explicit name captured by the parser (exact, then partial).
   if (topUp.name) {
@@ -43,15 +45,15 @@ export function resolveSavingsTarget(
   // 3) Unambiguous when there's only one goal.
   if (goals.length === 1) return { status: "ok", goal: goals[0]! };
 
-  // 4) Several goals and no hint — ask which one.
+  // 4) Several goals and no hint — ask which one with candidate list.
   return { status: "candidates", goals };
 }
 
-/** Helpful reply for unresolved top-ups (ask-first, never auto-create). */
+/** Helpful reply for unresolved top-ups. */
 export function savingsHint(goals: SavingsGoal[]): string {
   if (goals.length === 0) {
-    return 'You don\u2019t have a savings goal yet. Create one first \u2014 say "add savings goal: Emergency fund target 20000" \u2014 then I can add to it.';
+    return 'You don’t have a savings goal yet. Create one first — say "add savings goal: Emergency fund target 20000" — or I will create a General Savings goal for you.';
   }
-  const list = goals.map((g) => `\u2022 ${g.name} (${g.saved}/${g.target} ${g.currency})`).join("\n");
+  const list = goals.map((g) => `• ${g.name} (${g.saved}/${g.target} ${g.currency})`).join("\n");
   return `Which goal should I add to?\n${list}\nFor example: "add 5k to ${goals[0]!.name}".`;
 }

@@ -18,8 +18,11 @@ function goal(overrides: Partial<SavingsGoal> = {}): SavingsGoal {
 const topUp = (name?: string) => ({ kind: "addToSavings" as const, name, amount: 5000, currency: "PHP" as const });
 
 describe("resolveSavingsTarget", () => {
-  it("returns none when there are no goals at all", () => {
-    expect(resolveSavingsTarget(topUp(), "add 5k at the savings", [])).toEqual({ status: "none" });
+  it("returns none with defaultName when there are no goals at all", () => {
+    expect(resolveSavingsTarget(topUp(), "add 5k at the savings", [])).toEqual({
+      status: "none",
+      defaultName: "General Savings",
+    });
   });
 
   it("matches an explicit goal name exactly", () => {

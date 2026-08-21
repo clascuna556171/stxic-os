@@ -8,9 +8,10 @@ USD→PHP converter, UI presets (dark/light), PWA install, and encrypted backups
 One codebase → web now, Android APK later.
 
 > **Status:** planning complete, implementation beginning. See
-> [`docs/ROADMAP.md`](docs/ROADMAP.md) for the checklist and
+> [`docs/ROADMAP.md`](docs/ROADMAP.md) for the checklist,
 > [`docs/PROJECT_CONTEXT_MASTER.md`](docs/PROJECT_CONTEXT_MASTER.md) for the
-> master context.
+> master context, and [`docs/ARCHITECTURE_CODE_TREE.md`](docs/ARCHITECTURE_CODE_TREE.md)
+> for the master architecture and code tree diagrams.
 
 ## Tech Stack
 

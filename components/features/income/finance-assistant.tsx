@@ -2,27 +2,20 @@
 
 import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { Check, Send, Square, Undo2 } from "lucide-react";
+import { Send, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/toaster";
-import { describeAction, parseAiAction, type AiAction } from "@/lib/ai/actions";
-import { resolveSavingsTarget, savingsHint } from "@/lib/ai/savings";
+import { parseActionFromLlmResponse, parseAiAction, type AiAction } from "@/lib/ai/actions";
+import { executeAiAction, type ActionCandidate, type ExecutionResult } from "@/lib/ai/executor";
+import { ActionCard } from "@/components/features/ai/action-card";
 import { streamAiChat } from "@/lib/ai/client";
 import { financeAssistantPrompt } from "@/lib/ai/prompts";
-import {
-  deleteAccount,
-  deleteSavingsGoal,
-  deleteTransaction,
-  saveAccount,
-  saveSavingsGoal,
-  saveTransaction,
-} from "@/lib/hydrate";
 import { cn } from "@/lib/utils/cn";
 import type { ChatMessage } from "@/lib/ai/types";
-import type { Currency, FinanceAccount, SavingsGoal, Transaction } from "@/types";
+import type { Currency, SavingsGoal } from "@/types";
 
 const MarkdownPreview = dynamic(
   () => import("@/components/features/notes/markdown-preview").then((m) => m.MarkdownPreview),
@@ -33,8 +26,7 @@ interface Msg {
   id: string;
   role: "user" | "assistant";
   content: string;
-  /** Set when this message created/changed an item — enables Undo. */
-  action?: { kind: AiAction["kind"]; id: string; previousSaved?: number };
+  execution?: ExecutionResult;
 }
 
 const FINANCE_KINDS: AiAction["kind"][] = [
@@ -48,7 +40,7 @@ const FINANCE_KINDS: AiAction["kind"][] = [
 export function FinanceAssistant({
   defaultCurrency,
   context,
-  goals,
+  goals: _goals,
   onChanged,
 }: {
   defaultCurrency: Currency;
@@ -72,49 +64,37 @@ export function FinanceAssistant({
     setStreaming(false);
   }
 
-  async function undo(msg: Msg) {
-    if (!msg.action) return;
-    const { kind, id } = msg.action;
+  async function handleCandidateSelect(candidate: ActionCandidate, msgId: string) {
+    if (candidate.kind !== "addToSavings") return;
+    const action: AiAction = {
+      kind: "addToSavings",
+      name: candidate.name,
+      amount: 5000,
+      currency: defaultCurrency,
+    };
 
-    // Top-ups modify an existing goal — Undo restores the previous amount
-    // instead of deleting anything.
-    if (kind === "addToSavings") {
-      const goal = goals.find((g) => g.id === id);
-      if (!goal || msg.action.previousSaved == null) {
-        toast({ title: "Couldn't undo", description: "That goal no longer exists.", variant: "danger" });
-        return;
-      }
-      const res = await saveSavingsGoal({
-        ...goal,
-        saved: msg.action.previousSaved,
-        updatedAt: Date.now(),
-      });
-      if (res.ok) {
-        setMessages((m) => m.filter((x) => x.id !== msg.id));
-        toast({ title: "Undone", description: `${goal.name} restored to ${goal.currency} ${msg.action.previousSaved}.` });
-        onChanged();
-      } else {
-        toast({ title: "Couldn't undo", description: res.error, variant: "danger" });
-      }
-      return;
-    }
+    const result = await executeAiAction(action, "", defaultCurrency);
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === msgId
+          ? {
+              ...m,
+              content: result.ok ? `Selected ${candidate.name}.` : m.content,
+              execution: result,
+            }
+          : m,
+      ),
+    );
 
-    const res =
-      kind === "income" || kind === "expense"
-        ? await deleteTransaction(id)
-        : kind === "savingsGoal"
-          ? await deleteSavingsGoal(id)
-          : await deleteAccount(id);
-    if (res.ok) {
-      setMessages((m) => m.filter((x) => x.id !== msg.id));
-      toast({ title: "Undone", description: "The entry was removed." });
+    if (result.ok) {
+      toast({ title: result.described, variant: "success" });
       onChanged();
     } else {
-      toast({ title: "Couldn't undo", description: res.error, variant: "danger" });
+      toast({ title: "Action failed", description: result.error, variant: "danger" });
     }
   }
 
-  function send() {
+  async function send() {
     const text = input.trim();
     if (!text || streaming) return;
     setInput("");
@@ -122,6 +102,7 @@ export function FinanceAssistant({
     const userMsg: Msg = { id: crypto.randomUUID(), role: "user", content: text };
     const assistantId = crypto.randomUUID();
     setMessages((m) => [...m, userMsg, { id: assistantId, role: "assistant", content: "" }]);
+
     const action = parseAiAction(text, defaultCurrency);
 
     if (action) {
@@ -129,116 +110,36 @@ export function FinanceAssistant({
         setMessages((m) =>
           m.map((x) =>
             x.id === assistantId
-              ? { ...x, content: "I only manage finance here — tasks and notes have their own pages. Try `log expense lunch 250`." }
+              ? {
+                  ...x,
+                  content:
+                    "I only manage finance here — tasks, habits, and notes can be created in the main AI chat or their pages. Try `add 5k at the savings` or `log expense lunch 250`.",
+                }
               : x,
           ),
         );
         return;
       }
 
-      const now = Date.now();
-      void (async () => {
-        let res: { ok: boolean; error?: string } | null = null;
-        let createdId = "";
-        let described = describeAction(action);
-        let previousSaved: number | undefined;
-        try {
-          if (action.kind === "addToSavings") {
-            const resolution = resolveSavingsTarget(action, text, goals);
-            if (resolution.status !== "ok") {
-              setMessages((m) =>
-                m.map((x) =>
-                  x.id === assistantId
-                    ? {
-                        ...x,
-                        content:
-                          resolution.status === "candidates"
-                            ? savingsHint(resolution.goals)
-                            : savingsHint([]),
-                      }
-                    : x,
-                ),
-              );
-              return;
-            }
-            const goal = resolution.goal;
-            previousSaved = goal.saved;
-            described = describeAction({ ...action, name: goal.name });
-            res = await saveSavingsGoal({
-              ...goal,
-              saved: Math.round((goal.saved + action.amount) * 100) / 100,
-              updatedAt: now,
-            });
-            createdId = goal.id;
-          } else if (action.kind === "income" || action.kind === "expense") {
-            const item: Transaction = {
-              id: crypto.randomUUID(),
-              type: action.kind,
-              label: action.label,
-              amount: action.amount,
-              currency: action.currency,
-              category: action.category,
-              date: now,
-              createdAt: now,
-              updatedAt: now,
-            };
-            res = await saveTransaction(item);
-            createdId = item.id;
-          } else if (action.kind === "savingsGoal") {
-            const item: SavingsGoal = {
-              id: crypto.randomUUID(),
-              name: action.name,
-              target: action.target,
-              saved: action.saved,
-              currency: action.currency,
-              deadline: action.deadline,
-              createdAt: now,
-              updatedAt: now,
-            };
-            res = await saveSavingsGoal(item);
-            createdId = item.id;
-          } else if (action.kind === "account") {
-            const item: FinanceAccount = {
-              id: crypto.randomUUID(),
-              name: action.name,
-              kind: action.accountKind,
-              currency: action.currency,
-              balance: action.balance,
-              createdAt: now,
-              updatedAt: now,
-            };
-            res = await saveAccount(item);
-            createdId = item.id;
-          }
-        } catch (e) {
-          res = { ok: false, error: (e as Error).message };
-        }
+      const result = await executeAiAction(action, text, defaultCurrency);
+      setMessages((m) =>
+        m.map((x) =>
+          x.id === assistantId
+            ? {
+                ...x,
+                content: result.ok ? "" : result.described || "Could not execute action.",
+                execution: result,
+              }
+            : x,
+        ),
+      );
 
-        if (res?.ok) {
-          setMessages((m) =>
-            m.map((x) =>
-              x.id === assistantId
-                ? {
-                    ...x,
-                    content: described,
-                    action: { kind: action.kind, id: createdId, previousSaved },
-                  }
-                : x,
-            ),
-          );
-          toast({
-            title: action.kind === "addToSavings" ? "Savings updated" : `Added ${action.kind}`,
-            description: described,
-            variant: "success",
-          });
-          onChanged();
-        } else if (res) {
-          setMessages((m) =>
-            m.map((x) => (x.id === assistantId ? { ...x, content: "Couldn't create that." } : x)),
-          );
-          toast({ title: "Action failed", description: res.error ?? "Unknown error", variant: "danger" });
-        }
-      })();
+      if (result.ok) {
+        toast({ title: result.described, variant: "success" });
+        onChanged();
+      } else if (result.error) {
+        toast({ title: "Action failed", description: result.error, variant: "danger" });
+      }
       return;
     }
 
@@ -252,16 +153,50 @@ export function FinanceAssistant({
     const controller = new AbortController();
     abortRef.current = controller;
 
+    let accumulatedText = "";
+
     void streamAiChat(
       history,
       "auto",
       {
         onDelta: (t) => {
+          accumulatedText += t;
           setMessages((m) =>
-            m.map((x) => (x.id === assistantId ? { ...x, content: x.content + t } : x)),
+            m.map((x) => (x.id === assistantId ? { ...x, content: accumulatedText } : x)),
           );
         },
-        onDone: () => setStreaming(false),
+        onDone: async () => {
+          setStreaming(false);
+
+          const { cleanText, action: llmAction } = parseActionFromLlmResponse(accumulatedText);
+          let executionResult: ExecutionResult | undefined;
+
+          if (llmAction && FINANCE_KINDS.includes(llmAction.kind)) {
+            executionResult = await executeAiAction(llmAction, text, defaultCurrency);
+            if (executionResult.ok) {
+              toast({ title: executionResult.described, variant: "success" });
+              onChanged();
+            } else if (executionResult.error) {
+              toast({
+                title: "Action failed",
+                description: executionResult.error,
+                variant: "danger",
+              });
+            }
+          }
+
+          setMessages((m) =>
+            m.map((x) =>
+              x.id === assistantId
+                ? {
+                    ...x,
+                    content: cleanText,
+                    execution: executionResult,
+                  }
+                : x,
+            ),
+          );
+        },
         onError: (err) => {
           setMessages((m) =>
             m.map((x) =>
@@ -290,14 +225,14 @@ export function FinanceAssistant({
       <CardHeader className="pb-2">
         <CardTitle>Finance assistant</CardTitle>
         <CardDescription>
-          Try “add 5k at the savings”, “log expense lunch 250”, “record income 3000”, “add savings goal: new laptop target 60000”, or “add account: GCash 2500”.
+          Try &ldquo;add 5000 at the savings&rdquo;, &ldquo;log expense lunch 250&rdquo;, &ldquo;record income 3000&rdquo;, or &ldquo;add account: GCash 2500&rdquo;.
         </CardDescription>
       </CardHeader>
 
       <div ref={scrollRef} className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 py-2">
         {messages.length === 0 ? (
           <p className="text-muted px-2 py-10 text-center text-sm">
-            Ask me anything about your money — or just tell me to log an expense, income, savings goal, or account.
+            Ask me anything about your money — or tell me to top up savings, log an expense, income, or account.
           </p>
         ) : (
           messages.map((msg) => (
@@ -307,34 +242,28 @@ export function FinanceAssistant({
             >
               <div
                 className={cn(
-                  "max-w-[85%] rounded-xl px-3 py-2 text-sm whitespace-pre-wrap",
+                  "max-w-[85%] rounded-xl px-3.5 py-2.5 text-sm whitespace-pre-wrap",
                   msg.role === "user"
                     ? "bg-accent text-accent-fg"
-                    : msg.action
-                      ? "border-success/40 bg-success/10 text-foreground border"
-                      : "bg-surface-2 text-foreground",
+                    : "border-border/70 bg-surface-2 text-foreground border",
                 )}
               >
-                {msg.action ? (
-                  <div className="flex items-center gap-2">
-                    <Check className="text-success size-4 shrink-0" aria-hidden />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-foreground font-medium">Added · {msg.content}</p>
-                      <p className="text-muted text-xs">Saved to your finance records.</p>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => void undo(msg)}
-                      className="shrink-0"
-                    >
-                      <Undo2 />
-                      Undo
-                    </Button>
-                  </div>
-                ) : msg.role === "assistant" ? (
+                {msg.role === "assistant" ? (
                   <>
-                    <MarkdownPreview content={msg.content || "…"} />
+                    {msg.content ? <MarkdownPreview content={msg.content} /> : null}
+                    {msg.execution ? (
+                      <ActionCard
+                        action={msg.execution.action}
+                        described={msg.execution.described}
+                        itemId={msg.execution.itemId}
+                        itemTitle={msg.execution.itemTitle}
+                        itemHref={msg.execution.itemHref}
+                        snapshot={msg.execution.snapshot}
+                        candidates={msg.execution.candidates}
+                        onSelectCandidate={(cand) => handleCandidateSelect(cand, msg.id)}
+                        onUndone={onChanged}
+                      />
+                    ) : null}
                     {streaming && msg.id === messages[messages.length - 1]?.id ? (
                       <span className="text-muted animate-pulse motion-reduce:animate-none">▍</span>
                     ) : null}
@@ -353,7 +282,7 @@ export function FinanceAssistant({
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={onKeyDown}
-          placeholder="Ask about your money…"
+          placeholder="Ask about your money, add savings, log expenses…"
           rows={1}
           className="max-h-32 min-h-0 resize-none py-2.5"
           aria-label="Finance assistant message"

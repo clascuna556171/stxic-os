@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { describeAction, enrichTaskDescription, parseAiAction } from "@/lib/ai/actions";
+import {
+  describeAction,
+  enrichTaskDescription,
+  parseActionFromLlmResponse,
+  parseAiAction,
+} from "@/lib/ai/actions";
 
 const NOW = new Date(2026, 7, 19, 12, 0, 0).getTime();
 
@@ -53,6 +58,44 @@ describe("parseAiAction — tasks", () => {
     const action = parseAiAction("create task: buy milk tomorrow", "PHP", NOW);
     expect(action).toMatchObject({ kind: "task", title: "buy milk" });
     expect((action as { dueDate?: number }).dueDate).toBe(NOW + 86_400_000);
+  });
+
+  it("parses assignment type", () => {
+    const action = parseAiAction("create assignment: CS101 Project due tomorrow", "PHP", NOW);
+    expect(action).toMatchObject({ kind: "task", type: "assignment" });
+  });
+});
+
+describe("parseAiAction — complete task", () => {
+  it("parses 'mark task as done'", () => {
+    expect(parseAiAction("mark task Math Homework as done", "PHP", NOW)).toEqual({
+      kind: "completeTask",
+      query: "Math Homework",
+    });
+  });
+
+  it("parses 'complete task: CS Project'", () => {
+    expect(parseAiAction("complete task: CS Project", "PHP", NOW)).toEqual({
+      kind: "completeTask",
+      query: "CS Project",
+    });
+  });
+});
+
+describe("parseAiAction — habits", () => {
+  it("parses habit creation with emoji", () => {
+    expect(parseAiAction("create habit 📚 Read 20 pages", "PHP", NOW)).toEqual({
+      kind: "habit",
+      name: "Read 20 pages",
+      emoji: "📚",
+    });
+  });
+
+  it("parses habit check-in", () => {
+    expect(parseAiAction("check off habit Read 20 pages", "PHP", NOW)).toEqual({
+      kind: "checkHabit",
+      query: "Read 20 pages",
+    });
   });
 });
 
@@ -188,6 +231,15 @@ describe("parseAiAction — add to savings", () => {
     });
   });
 
+  it("parses 'Add 5000 at the savings' with standard integer", () => {
+    expect(parseAiAction("Add 5000 at the savings", "PHP", NOW)).toEqual({
+      kind: "addToSavings",
+      name: undefined,
+      amount: 5000,
+      currency: "PHP",
+    });
+  });
+
   it("parses deposits into savings", () => {
     expect(parseAiAction("deposit 2k into my savings", "PHP", NOW)).toMatchObject({
       kind: "addToSavings",
@@ -226,6 +278,34 @@ describe("parseAiAction — k/m amounts everywhere", () => {
       kind: "income",
       amount: 3000,
     });
+  });
+});
+
+describe("parseActionFromLlmResponse", () => {
+  it("extracts stxic-action code block and cleans text", () => {
+    const raw = `I'll add that to your savings right away!
+
+\`\`\`stxic-action
+{
+  "kind": "addToSavings",
+  "amount": 5000,
+  "currency": "PHP"
+}
+\`\`\``;
+
+    const res = parseActionFromLlmResponse(raw);
+    expect(res.cleanText).toBe("I'll add that to your savings right away!");
+    expect(res.action).toEqual({
+      kind: "addToSavings",
+      amount: 5000,
+      currency: "PHP",
+    });
+  });
+
+  it("returns null action when no block is present", () => {
+    const res = parseActionFromLlmResponse("Here are your top 3 priorities for today.");
+    expect(res.cleanText).toBe("Here are your top 3 priorities for today.");
+    expect(res.action).toBeNull();
   });
 });
 

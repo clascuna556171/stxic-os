@@ -2,31 +2,26 @@
 
 import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { Brain, Check, Send, Sparkles, Square, Undo2 } from "lucide-react";
+import { Brain, Send, Sparkles, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/toaster";
 import { streamAiChat } from "@/lib/ai/client";
-import { describeAction, parseAiAction, type AiAction } from "@/lib/ai/actions";
-import { resolveSavingsTarget, savingsHint } from "@/lib/ai/savings";
+import { parseActionFromLlmResponse, parseAiAction, type AiAction } from "@/lib/ai/actions";
+import { executeAiAction, type ActionCandidate, type ExecutionResult } from "@/lib/ai/executor";
+import { ActionCard } from "@/components/features/ai/action-card";
 import { aiChatSystemPrompt } from "@/lib/ai/prompts";
 import {
-  deleteAccount,
-  deleteNote,
-  deleteSavingsGoal,
-  deleteTask,
-  deleteTransaction,
   getSettings,
+  listAccounts,
+  listHabits,
+  listNotes,
   listSavingsGoals,
-  saveAccount,
-  saveNote,
-  saveSavingsGoal,
-  saveTask,
-  saveTransaction,
+  listTasks,
 } from "@/lib/hydrate";
 import { cn } from "@/lib/utils/cn";
 import type { AiProvider, ChatMessage } from "@/lib/ai/types";
-import type { Currency, FinanceAccount, Note, SavingsGoal, TaskItem, Transaction } from "@/types";
+import type { Currency } from "@/types";
 
 const MarkdownPreview = dynamic(
   () => import("@/components/features/notes/markdown-preview").then((m) => m.MarkdownPreview),
@@ -47,8 +42,7 @@ interface UiMessage {
   content: string;
   provider?: string;
   fallback?: boolean;
-  /** Set when this assistant message was created by an AI action, not the model. */
-  action?: { kind: AiAction["kind"]; id: string; previousSaved?: number };
+  execution?: ExecutionResult;
 }
 
 export default function AiChatPage() {
@@ -79,207 +73,133 @@ export default function AiChatPage() {
     setStreamingId(null);
   }
 
-  async function undoAction(msg: UiMessage) {
-    if (!msg.action) return;
-    const { kind, id } = msg.action;
+  async function buildContextSummary(): Promise<string> {
+    try {
+      const [tasksRes, goalsRes, accountsRes, habitsRes, notesRes] = await Promise.all([
+        listTasks(),
+        listSavingsGoals(),
+        listAccounts(),
+        listHabits(),
+        listNotes(),
+      ]);
 
-    // Top-ups modify an existing goal — Undo restores the previous amount.
-    if (kind === "addToSavings") {
-      if (msg.action.previousSaved == null) return;
-      const gRes = await listSavingsGoals();
-      const goal = gRes.ok ? gRes.data.find((g) => g.id === id) : undefined;
-      if (!goal) {
-        toast({ title: "Couldn't undo", description: "That goal no longer exists.", variant: "danger" });
-        return;
+      const parts: string[] = [];
+
+      if (tasksRes.ok && tasksRes.data.length > 0) {
+        const open = tasksRes.data.filter((t) => t.status !== "done");
+        const list = open
+          .slice(0, 5)
+          .map((t) => `• [${t.priority}] ${t.title}`)
+          .join("\n");
+        parts.push(`Open Tasks (${open.length}):\n${list || "None"}`);
       }
-      const res = await saveSavingsGoal({
-        ...goal,
-        saved: msg.action.previousSaved,
-        updatedAt: Date.now(),
-      });
-      if (res.ok) {
-        setMessages((m) => m.filter((x) => x.id !== msg.id));
-        toast({ title: "Undone", description: `${goal.name} restored to ${goal.currency} ${msg.action.previousSaved}.` });
+
+      if (goalsRes.ok && goalsRes.data.length > 0) {
+        const list = goalsRes.data
+          .map((g) => `• ${g.name}: ${g.saved} / ${g.target} ${g.currency}`)
+          .join("\n");
+        parts.push(`Savings Goals (${goalsRes.data.length}):\n${list}`);
       } else {
-        toast({ title: "Couldn't undo", description: res.error, variant: "danger" });
+        parts.push(`Savings Goals: None currently configured.`);
       }
-      return;
-    }
 
-    const res =
-      kind === "task"
-        ? await deleteTask(id)
-        : kind === "note"
-          ? await deleteNote(id)
-          : kind === "income" || kind === "expense"
-            ? await deleteTransaction(id)
-            : kind === "savingsGoal"
-              ? await deleteSavingsGoal(id)
-              : await deleteAccount(id);
-    if (res.ok) {
-      setMessages((m) => m.filter((x) => x.id !== msg.id));
-      toast({ title: "Undone", description: "The item was removed." });
-    } else {
-      toast({ title: "Couldn't undo", description: res.error, variant: "danger" });
+      if (accountsRes.ok && accountsRes.data.length > 0) {
+        const list = accountsRes.data
+          .map((a) => `• ${a.name} (${a.kind}): ${a.balance} ${a.currency}`)
+          .join("\n");
+        parts.push(`Accounts:\n${list}`);
+      }
+
+      if (habitsRes.ok && habitsRes.data.length > 0) {
+        const list = habitsRes.data
+          .map((h) => `• ${h.emoji ? h.emoji + " " : ""}${h.name} (${h.streak}-day streak)`)
+          .join("\n");
+        parts.push(`Habits:\n${list}`);
+      }
+
+      if (notesRes.ok && notesRes.data.length > 0) {
+        const titles = notesRes.data.slice(0, 5).map((n) => `"${n.title}"`).join(", ");
+        parts.push(`Notes: ${notesRes.data.length} total (${titles})`);
+      }
+
+      return parts.join("\n\n");
+    } catch {
+      return "";
     }
   }
 
-  function send() {
+  async function handleCandidateSelect(candidate: ActionCandidate, msgId: string) {
+    let action: AiAction | null = null;
+    if (candidate.kind === "addToSavings") {
+      action = { kind: "addToSavings", name: candidate.name, amount: 5000, currency: defaultCurrency };
+    } else if (candidate.kind === "completeTask") {
+      action = { kind: "completeTask", query: candidate.name, taskId: candidate.id };
+    } else if (candidate.kind === "checkHabit") {
+      action = { kind: "checkHabit", query: candidate.name, habitId: candidate.id };
+    }
+
+    if (!action) return;
+
+    const result = await executeAiAction(action, "", defaultCurrency);
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === msgId
+          ? {
+              ...m,
+              content: result.ok ? `Selected ${candidate.name}.` : m.content,
+              execution: result,
+            }
+          : m,
+      ),
+    );
+
+    if (result.ok) {
+      toast({ title: result.described, variant: "success" });
+    } else {
+      toast({ title: "Action failed", description: result.error, variant: "danger" });
+    }
+  }
+
+  async function send() {
     const text = input.trim();
     if (!text || streaming) return;
     setInput("");
 
     const userMsg: UiMessage = { id: crypto.randomUUID(), role: "user", content: text };
     const assistantId = crypto.randomUUID();
-    const action = parseAiAction(text, defaultCurrency);
+    const directAction = parseAiAction(text, defaultCurrency);
 
     setMessages((m) => [...m, userMsg, { id: assistantId, role: "assistant", content: "" }]);
 
-    // Deterministic action → create the real item, no model call.
-    if (action) {
-      const now = Date.now();
-      void (async () => {
-        let res: { ok: boolean; error?: string } | null = null;
-        let createdId = "";
-        let described = describeAction(action);
-        let previousSaved: number | undefined;
-        try {
-          if (action.kind === "addToSavings") {
-            const gRes = await listSavingsGoals();
-            const goals = gRes.ok ? gRes.data : [];
-            const resolution = resolveSavingsTarget(action, text, goals);
-            if (resolution.status !== "ok") {
-              setMessages((m) =>
-                m.map((msg) =>
-                  msg.id === assistantId
-                    ? {
-                        ...msg,
-                        content:
-                          resolution.status === "candidates"
-                            ? savingsHint(resolution.goals)
-                            : savingsHint([]),
-                      }
-                    : msg,
-                ),
-              );
-              return;
-            }
-            const goal = resolution.goal;
-            previousSaved = goal.saved;
-            described = describeAction({ ...action, name: goal.name });
-            res = await saveSavingsGoal({
-              ...goal,
-              saved: Math.round((goal.saved + action.amount) * 100) / 100,
-              updatedAt: now,
-            });
-            createdId = goal.id;
-          } else if (action.kind === "task") {
-            const item: TaskItem = {
-              id: crypto.randomUUID(),
-              title: action.title,
-              description: action.description,
-              status: "todo",
-              priority: action.priority,
-              type: "task",
-              dueDate: action.dueDate,
-              createdAt: now,
-              updatedAt: now,
-            };
-            const r = await saveTask(item);
-            res = r;
-            createdId = item.id;
-          } else if (action.kind === "income" || action.kind === "expense") {
-            const item: Transaction = {
-              id: crypto.randomUUID(),
-              type: action.kind,
-              label: action.label,
-              amount: action.amount,
-              currency: action.currency,
-              category: action.category,
-              date: now,
-              createdAt: now,
-              updatedAt: now,
-            };
-            const r = await saveTransaction(item);
-            res = r;
-            createdId = item.id;
-          } else if (action.kind === "note") {
-            const item: Note = {
-              id: crypto.randomUUID(),
-              title: action.title,
-              content: action.content,
-              folder: "",
-              tags: [],
-              favorite: false,
-              createdAt: now,
-              updatedAt: now,
-            };
-            const r = await saveNote(item);
-            res = r;
-            createdId = item.id;
-          } else if (action.kind === "savingsGoal") {
-            const item: SavingsGoal = {
-              id: crypto.randomUUID(),
-              name: action.name,
-              target: action.target,
-              saved: action.saved,
-              currency: action.currency,
-              deadline: action.deadline,
-              createdAt: now,
-              updatedAt: now,
-            };
-            const r = await saveSavingsGoal(item);
-            res = r;
-            createdId = item.id;
-          } else {
-            const item: FinanceAccount = {
-              id: crypto.randomUUID(),
-              name: action.name,
-              kind: action.accountKind,
-              currency: action.currency,
-              balance: action.balance,
-              createdAt: now,
-              updatedAt: now,
-            };
-            const r = await saveAccount(item);
-            res = r;
-            createdId = item.id;
-          }
-        } catch (e) {
-          res = { ok: false, error: (e as Error).message };
-        }
+    // Deterministic fast path -> execute real action directly
+    if (directAction) {
+      const result = await executeAiAction(directAction, text, defaultCurrency);
+      setMessages((m) =>
+        m.map((msg) =>
+          msg.id === assistantId
+            ? {
+                ...msg,
+                content: result.ok ? "" : result.described || "Could not complete action.",
+                execution: result,
+              }
+            : msg,
+        ),
+      );
 
-        if (res?.ok) {
-          setMessages((m) =>
-            m.map((msg) =>
-              msg.id === assistantId
-                ? {
-                    ...msg,
-                    content: described,
-                    action: { kind: action.kind, id: createdId, previousSaved },
-                  }
-                : msg,
-            ),
-          );
-          toast({
-            title: action.kind === "addToSavings" ? "Savings updated" : `Added ${action.kind}`,
-            description: described,
-            variant: "success",
-          });
-        } else if (res) {
-          setMessages((m) =>
-            m.map((msg) =>
-              msg.id === assistantId ? { ...msg, content: "Couldn't create that.", fallback: true } : msg,
-            ),
-          );
-          toast({ title: "Action failed", description: res?.error ?? "Unknown error", variant: "danger" });
-        }
-      })();
+      if (result.ok) {
+        toast({ title: result.described, variant: "success" });
+      } else if (result.error) {
+        toast({ title: "Action failed", description: result.error, variant: "danger" });
+      }
       return;
     }
 
+    // Model path -> prompt LLM with current workspace context
+    const contextSummary = await buildContextSummary();
+    const systemPrompt = aiChatSystemPrompt(contextSummary);
+
     const history: ChatMessage[] = [
-      { role: "system", content: aiChatSystemPrompt() },
+      { role: "system", content: systemPrompt },
       ...messages.map((m) => ({ role: m.role, content: m.content })),
       { role: "user", content: text },
     ];
@@ -290,35 +210,62 @@ export default function AiChatPage() {
     const controller = new AbortController();
     abortRef.current = controller;
 
+    let accumulatedText = "";
+
     void streamAiChat(
       history,
       provider,
       {
         onDelta: (t, p) => {
+          accumulatedText += t;
           setMessages((m) =>
             m.map((msg) =>
               msg.id === assistantId
-                ? { ...msg, content: msg.content + t, provider: p ?? msg.provider }
+                ? { ...msg, content: accumulatedText, provider: p ?? msg.provider }
                 : msg,
             ),
           );
         },
-        onDone: (ev) => {
+        onDone: async (ev) => {
+          setStreaming(false);
+          setStreamingId(null);
+
+          // Check if the LLM output contained a structured action
+          const { cleanText, action } = parseActionFromLlmResponse(accumulatedText);
+          let executionResult: ExecutionResult | undefined;
+
+          if (action) {
+            executionResult = await executeAiAction(action, text, defaultCurrency);
+            if (executionResult.ok) {
+              toast({ title: executionResult.described, variant: "success" });
+            } else if (executionResult.error) {
+              toast({
+                title: "Action failed",
+                description: executionResult.error,
+                variant: "danger",
+              });
+            }
+          }
+
           setMessages((m) =>
             m.map((msg) =>
               msg.id === assistantId
-                ? { ...msg, provider: ev.provider, fallback: ev.fallback }
+                ? {
+                    ...msg,
+                    content: cleanText,
+                    provider: ev.provider,
+                    fallback: ev.fallback,
+                    execution: executionResult,
+                  }
                 : msg,
             ),
           );
-          setStreaming(false);
-          setStreamingId(null);
         },
         onError: (err) => {
           setMessages((m) =>
             m.map((msg) =>
               msg.id === assistantId && !msg.content
-                ? { ...msg, content: "Something went wrong.", fallback: true }
+                ? { ...msg, content: "Something went wrong reaching the AI model.", fallback: true }
                 : msg,
             ),
           );
@@ -342,8 +289,10 @@ export default function AiChatPage() {
     <div className="flex flex-col gap-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-foreground text-xl font-semibold tracking-tight">AI chat</h2>
-          <p className="text-muted text-sm">Local Ollama first, Groq cloud fallback.</p>
+          <h2 className="text-foreground text-xl font-semibold tracking-tight">AI Assistant</h2>
+          <p className="text-muted text-sm">
+            Manage your finances, tasks, habits, and notes with intelligent actions.
+          </p>
         </div>
         <div className="flex items-center gap-1">
           {PROVIDERS.map((p) => (
@@ -364,7 +313,9 @@ export default function AiChatPage() {
             type="button"
             onClick={() => setReasoning((r) => !r)}
             aria-pressed={reasoning}
-            title={reasoning ? "Thinking shown — replies may be slower" : "Thinking on, hidden — better answers"}
+            title={
+              reasoning ? "Thinking shown — replies may be slower" : "Thinking on, hidden — better answers"
+            }
             aria-label="Toggle thinking"
             className={cn(
               "text-muted hover:text-foreground rounded-lg p-1.5 transition-colors",
@@ -376,32 +327,33 @@ export default function AiChatPage() {
         </div>
       </header>
 
-      <div className="border-border bg-surface flex min-h-[60dvh] flex-col overflow-hidden rounded-xl border">
+      <div className="border-border bg-surface flex min-h-[65dvh] flex-col overflow-hidden rounded-xl border shadow-sm">
         <div ref={scrollRef} className="flex flex-1 flex-col gap-4 overflow-y-auto p-4">
           {messages.length === 0 ? (
-            <div className="flex flex-1 flex-col items-center justify-center gap-2 py-16 text-center">
-              <div className="bg-surface-2 text-accent flex size-12 items-center justify-center rounded-full">
+            <div className="flex flex-1 flex-col items-center justify-center gap-3 py-16 text-center">
+              <div className="bg-surface-2 text-accent flex size-12 items-center justify-center rounded-full shadow-inner">
                 <Sparkles className="size-6" />
               </div>
-              <p className="text-foreground text-sm font-medium">Ask anything</p>
-              <p className="text-muted max-w-sm text-sm">
-                Your prompts are sent to your chosen model — never your vault or passwords.
-              </p>
+              <div>
+                <p className="text-foreground text-base font-semibold">How can I help you today?</p>
+                <p className="text-muted mt-1 max-w-md text-xs leading-relaxed">
+                  Try asking &ldquo;Add 5000 at the savings&rdquo;, &ldquo;Spent 350 on groceries&rdquo;, &ldquo;Add
+                  P0 task: Finish CS project&rdquo;, or &ldquo;Check in reading habit&rdquo;.
+                </p>
+              </div>
             </div>
           ) : (
             messages.map((msg) => (
               <div
                 key={msg.id}
-                className={cn("flex flex-col gap-1", msg.role === "user" && "items-end")}
+                className={cn("flex flex-col gap-1.5", msg.role === "user" && "items-end")}
               >
                 <div
                   className={cn(
-                    "max-w-[85%] rounded-xl px-3.5 py-2.5 text-sm whitespace-pre-wrap",
+                    "max-w-[85%] rounded-2xl px-4 py-3 text-sm whitespace-pre-wrap shadow-sm",
                     msg.role === "user"
                       ? "bg-accent text-accent-fg"
-                      : msg.action
-                        ? "border-success/40 bg-success/10 text-foreground border"
-                        : "bg-surface-2 text-foreground",
+                      : "border-border/70 bg-surface-2/90 text-foreground border",
                   )}
                 >
                   {msg.role === "assistant" && msg.id === streamingId ? (
@@ -409,32 +361,38 @@ export default function AiChatPage() {
                       {msg.content}
                       <span className="text-muted animate-pulse motion-reduce:animate-none">▍</span>
                     </span>
-                  ) : msg.action ? (
-                    <div className="flex items-center gap-2">
-                      <Check className="text-success size-4 shrink-0" aria-hidden />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-foreground font-medium">Added · {msg.content}</p>
-                        <p className="text-muted text-xs">Saved to your {msg.action.kind} list.</p>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => void undoAction(msg)}
-                        className="shrink-0"
-                      >
-                        <Undo2 />
-                        Undo
-                      </Button>
-                    </div>
-                  ) : msg.role === "assistant" ? (
-                    <MarkdownPreview content={msg.content} />
                   ) : (
-                    msg.content
+                    <>
+                      {msg.content ? (
+                        msg.role === "assistant" ? (
+                          <MarkdownPreview content={msg.content} />
+                        ) : (
+                          msg.content
+                        )
+                      ) : null}
+
+                      {msg.execution ? (
+                        <ActionCard
+                          action={msg.execution.action}
+                          described={msg.execution.described}
+                          itemId={msg.execution.itemId}
+                          itemTitle={msg.execution.itemTitle}
+                          itemHref={msg.execution.itemHref}
+                          snapshot={msg.execution.snapshot}
+                          candidates={msg.execution.candidates}
+                          onSelectCandidate={(cand) => handleCandidateSelect(cand, msg.id)}
+                        />
+                      ) : null}
+                    </>
                   )}
                 </div>
-                {msg.role === "assistant" && (msg.provider || msg.action) ? (
-                  <span className="text-muted px-1 text-[11px]">
-                    {msg.action ? "· action" : `via ${PROVIDER_LABEL[msg.provider!] ?? msg.provider}`}
+                {msg.role === "assistant" && (msg.provider || msg.execution) ? (
+                  <span className="text-muted px-1.5 text-[11px]">
+                    {msg.execution?.ok
+                      ? "· action executed"
+                      : msg.provider
+                        ? `via ${PROVIDER_LABEL[msg.provider] ?? msg.provider}`
+                        : ""}
                     {msg.provider && msg.fallback ? " · fallback" : ""}
                   </span>
                 ) : null}
@@ -443,12 +401,12 @@ export default function AiChatPage() {
           )}
         </div>
 
-        <div className="border-border flex items-end gap-2 border-t p-3">
+        <div className="border-border bg-surface/50 flex items-end gap-2 border-t p-3 backdrop-blur-sm">
           <Textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={onKeyDown}
-            placeholder="Message your AI…"
+            placeholder="Tell your AI to add savings, log expenses, create tasks, check habits…"
             rows={1}
             className="max-h-40 min-h-0 resize-none py-2.5"
             aria-label="Chat message"

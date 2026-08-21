@@ -1,17 +1,24 @@
 /**
- * Stxic AI chat actions — natural-language intents that create real items.
+ * Stxic AI chat actions — natural-language intents that create and update real items.
  *
- * `parseAiAction` is pure and unit-tested; the chat page performs the actual
- * hydrate writes. Non-action text returns `null` and is handled by the normal
- * model chat.
+ * `parseAiAction` is pure and unit-tested; `parseActionFromLlmResponse` extracts
+ * structured action blocks emitted by AI models.
  */
 
-import type { AccountKind, Currency, TaskPriority } from "@/types";
+import type { AccountKind, Currency, TaskPriority, TaskType } from "@/types";
 
 const DAY_MS = 86_400_000;
 
 export type AiAction =
-  | { kind: "task"; title: string; priority: TaskPriority; dueDate?: number; description: string }
+  | {
+      kind: "task";
+      title: string;
+      priority: TaskPriority;
+      dueDate?: number;
+      description: string;
+      type?: TaskType;
+    }
+  | { kind: "completeTask"; query: string; taskId?: string }
   | {
       kind: "income";
       label: string;
@@ -26,7 +33,7 @@ export type AiAction =
       category: string;
       currency: Currency;
     }
-  | { kind: "note"; title: string; content: string }
+  | { kind: "note"; title: string; content: string; folder?: string; tags?: string[] }
   | {
       kind: "savingsGoal";
       name: string;
@@ -36,25 +43,33 @@ export type AiAction =
       deadline?: number;
     }
   | { kind: "account"; name: string; accountKind: AccountKind; currency: Currency; balance: number }
-  | { kind: "addToSavings"; name?: string; amount: number; currency: Currency };
+  | { kind: "addToSavings"; name?: string; amount: number; currency: Currency }
+  | { kind: "habit"; name: string; emoji?: string; targetDays?: number }
+  | { kind: "checkHabit"; query: string; habitId?: string };
 
-/** Quick one-line confirmation shown in the chat bubble. */
+/** Quick one-line confirmation shown in action cards and toasts. */
 export function describeAction(action: AiAction): string {
   switch (action.kind) {
     case "task":
       return `Task: ${action.title} · ${action.priority}${action.dueDate ? " · due soon" : ""}`;
+    case "completeTask":
+      return `Marked task completed: "${action.query}"`;
     case "income":
-      return `${action.label} · ${action.amount} ${action.currency} (${action.category})`;
+      return `+${action.amount} ${action.currency} (${action.category}) — ${action.label}`;
     case "expense":
-      return `${action.label} · ${action.amount} ${action.currency} (${action.category})`;
+      return `-${action.amount} ${action.currency} (${action.category}) — ${action.label}`;
     case "note":
       return `Note: ${action.title}`;
     case "savingsGoal":
-      return `${action.name} · target ${action.target} ${action.currency}`;
+      return `Goal: ${action.name} · target ${action.target} ${action.currency}`;
     case "account":
-      return `${action.name} · ${action.balance} ${action.currency} (${action.accountKind})`;
+      return `Account: ${action.name} · ${action.balance} ${action.currency} (${action.accountKind})`;
     case "addToSavings":
       return `+${action.amount} ${action.currency} → ${action.name ?? "savings"}`;
+    case "habit":
+      return `Habit: ${action.emoji ? action.emoji + " " : ""}${action.name}`;
+    case "checkHabit":
+      return `Checked in habit: "${action.query}"`;
   }
 }
 
@@ -167,7 +182,10 @@ function parseDue(text: string, now: number): { due: number; cleaned: string } |
     due = date.getTime();
   }
   if (!due) return null;
-  const cleaned = text.replace(/today|tomorrow|in\s+\d+\s+(?:day|days|week|weeks)|next\s+(?:mon|tue|wed|thu|fri|sat|sun|monday|tuesday|wednesday|thursday|friday|saturday|sunday)|\d{1,2}[\/\-]\d{1,2}/gi, "");
+  const cleaned = text.replace(
+    /today|tomorrow|in\s+\d+\s+(?:day|days|week|weeks)|next\s+(?:mon|tue|wed|thu|fri|sat|sun|monday|tuesday|wednesday|thursday|friday|saturday|sunday)|\d{1,2}[\/\-]\d{1,2}/gi,
+    "",
+  );
   return { due, cleaned };
 }
 
@@ -214,7 +232,10 @@ function guessAccountKind(name: string): AccountKind {
 }
 
 /** Parse a savings-goal phrase: name + optional target/saved amounts. */
-function parseSavingsGoal(text: string, defaultCurrency: Currency): {
+function parseSavingsGoal(
+  text: string,
+  defaultCurrency: Currency,
+): {
   name: string;
   target: number;
   saved: number;
@@ -240,7 +261,10 @@ function parseSavingsGoal(text: string, defaultCurrency: Currency): {
 }
 
 /** Parse an account phrase: name + balance + guessed kind. */
-function parseAccount(text: string, defaultCurrency: Currency): {
+function parseAccount(
+  text: string,
+  defaultCurrency: Currency,
+): {
   name: string;
   accountKind: AccountKind;
   currency: Currency;
@@ -258,12 +282,60 @@ function parseAccount(text: string, defaultCurrency: Currency): {
   };
 }
 
-export function parseAiAction(text: string, defaultCurrency: Currency = "PHP", now = Date.now()): AiAction | null {
+export function parseAiAction(
+  text: string,
+  defaultCurrency: Currency = "PHP",
+  now = Date.now(),
+): AiAction | null {
   const input = text.trim();
   if (!input) return null;
 
+  // ── Habit check-in ─────────────────────────────────────────
+  let m =
+    input.match(/^(?:check(?:\s*off)?|complete|log|done(?:\s+with)?)\s+(?:habit\s*:?\s*)?(.+?)(?:\s+habit)?$/i) ??
+    input.match(/^done\s+with\s+(?:habit\s+)?(.+)$/i);
+  if (m && !input.match(/^(?:check|complete|done)\s+(?:task|todo)/i)) {
+    const raw = cleanTitle(m[1]!);
+    if (raw && !raw.toLowerCase().startsWith("task") && !raw.toLowerCase().startsWith("note")) {
+      const isHabitExplicit = /habit/i.test(input);
+      if (isHabitExplicit) {
+        return { kind: "checkHabit", query: raw };
+      }
+    }
+  }
+
+  // ── Create Habit ───────────────────────────────────────────
+  m = input.match(/^(?:add|create|new|start)\s+(?:a\s+)?habit\s*:?\s+(.+)$/i);
+  if (m) {
+    const raw = m[1]!.trim();
+    // Extract leading emoji if present
+    const emojiMatch = raw.match(/^([\p{Emoji}\u200d]+)\s*(.+)$/u);
+    const emoji = emojiMatch ? emojiMatch[1] : undefined;
+    const name = cleanTitle(emojiMatch ? emojiMatch[2]! : raw);
+    if (name) {
+      return { kind: "habit", name, emoji };
+    }
+  }
+
+  // ── Complete Task ──────────────────────────────────────────
+  m =
+    input.match(/^(?:mark|check(?:\s*off)?|complete|done(?:\s+with)?|finish(?:ed)?)\s+(?:task|todo|to-?do|assignment)?\s*:?\s*(.+?)(?:\s+as\s+done|\s+as\s+completed)?$/i) ??
+    input.match(/^(?:mark|set)\s+(.+?)\s+as\s+(?:done|completed?|finished)$/i);
+  if (m) {
+    const query = cleanTitle(m[1]!);
+    if (query && !query.match(/^(?:a\s+)?(?:task|note|habit|expense|income)$/i)) {
+      const isTaskIntent =
+        /task|todo|assignment|as done|as completed|finish/i.test(input) ||
+        input.startsWith("mark ") ||
+        input.startsWith("check off ");
+      if (isTaskIntent) {
+        return { kind: "completeTask", query };
+      }
+    }
+  }
+
   // ── Note ──────────────────────────────────────────────────
-  let m = input.match(/^(?:add|create|new)\s+(?:a\s+)?note\s*:?\s+(.+)$/i);
+  m = input.match(/^(?:add|create|new)\s+(?:a\s+)?note\s*:?\s+(.+)$/i);
   if (m) {
     const [title, content] = splitTitleContent(cleanTitle(m[1]!));
     return { kind: "note", title, content };
@@ -276,7 +348,7 @@ export function parseAiAction(text: string, defaultCurrency: Currency = "PHP", n
     if (goal) return { kind: "savingsGoal", ...goal };
   }
 
-  // ── Add to savings (top up an existing goal) ──────────────
+  // ── Add to savings (top up an existing goal or savings) ─────
   // Variant A: "add 5k at/to/into the savings [for X]"
   // Variant B: "top up savings [with] 5k"
   // Variant C: "add 5k to my emergency fund" (name resolved against goals later)
@@ -291,18 +363,14 @@ export function parseAiAction(text: string, defaultCurrency: Currency = "PHP", n
       /^(?:add|put|deposit|move|transfer)\s+(\d+(?:\.\d+)?[km]?)\s+(?:to|into|at|in|towards?)\s+(?:the\s+|my\s+)?(.+)$/i,
     );
   if (topUpMatch) {
-    // Amount is the leading number for variants A/C, trailing for B — take the
-    // last number token of the whole match either way.
     const amountToken = [...topUpMatch[0].matchAll(NUM_RE)].pop()?.[0];
     if (!amountToken) return null;
     const amount = expandAmount(amountToken);
     if (!Number.isFinite(amount) || amount <= 0) return null;
-    // Variant B keeps its name in group 1 (group 2 is the amount); the others
-    // keep it in their final group.
     const isTopUpFirst = /^top/i.test(input);
     const rawName = (isTopUpFirst ? topUpMatch[1] : topUpMatch[topUpMatch.length - 1])?.trim() ?? "";
     const name = rawName ? cleanTitle(rawName.replace(/^(?:for|with)\s+/i, "")) : "";
-    if (name.toLowerCase() === "tasks") return null; // let the task intent win
+    if (name.toLowerCase() === "tasks") return null; // let task intent win
     return {
       kind: "addToSavings",
       name: name || undefined,
@@ -320,17 +388,16 @@ export function parseAiAction(text: string, defaultCurrency: Currency = "PHP", n
 
   // ── Task ──────────────────────────────────────────────────
   m =
-    input.match(/^(?:add|create)\s+(?:(?:a|an)\s+)?(?:new\s+)?(?:task|todo|to-?do)\s*:?\s+(.+)$/i) ??
-    input.match(/^new\s+(?:task|todo|to-?do)\s*:?\s+(.+)$/i) ??
+    input.match(/^(?:add|create)\s+(?:(?:a|an)\s+)?(?:new\s+)?(?:task|todo|to-?do|assignment)\s*:?\s+(.+)$/i) ??
+    input.match(/^new\s+(?:task|todo|to-?do|assignment)\s*:?\s+(.+)$/i) ??
     input.match(
-      /^(?:add|create)\s+(?:(?:a|an)\s+)?(?:p[0-2]|high|medium|low)\s+(?:priority\s+)?(?:task|todo|to-?do)\s*:?\s+(.+)$/i,
+      /^(?:add|create)\s+(?:(?:a|an)\s+)?(?:p[0-2]|high|medium|low)\s+(?:priority\s+)?(?:task|todo|to-?do|assignment)\s*:?\s+(.+)$/i,
     ) ??
-    input.match(/^(?:add|create)\s+(?:a\s+)?(.+?)\s+to\s+(?:my\s+)?tasks$/i) ??
+    input.match(/^(?:add|create)\s+(?:a\s+)?(.+?)\s+to\s+(?:my\s+)?(?:tasks|todos)$/i) ??
     input.match(/^remind\s+me\s+to\s+(.+)$/i);
   if (m) {
     let title = cleanTitle(m[1]!);
     let priority: TaskPriority = "P2";
-    // Priority in the verb prefix, e.g. "add P1 task X".
     const pref = m[0].match(/^(?:add|create)\s+(?:(?:a|an)\s+)?(p[0-2]|high|medium|low)\b/i);
     if (pref) priority = PRIORITY_MAP[pref[1]!.toLowerCase()] ?? "P2";
     const pm = title.match(/\b(p0|p1|p2|high|urgent|medium|normal|low)\b/i);
@@ -342,7 +409,15 @@ export function parseAiAction(text: string, defaultCurrency: Currency = "PHP", n
     if (due) title = due.cleaned;
     title = cleanTitle(title);
     if (!title) return null;
-    return { kind: "task", title, priority, dueDate: due?.due, description: enrichTaskDescription(title) };
+    const isAssignment = /assignment|homework|exam|quiz/i.test(m[0]);
+    return {
+      kind: "task",
+      title,
+      priority,
+      dueDate: due?.due,
+      description: enrichTaskDescription(title),
+      type: isAssignment ? "assignment" : "task",
+    };
   }
 
   // ── Expense ───────────────────────────────────────────────
@@ -367,7 +442,7 @@ export function parseAiAction(text: string, defaultCurrency: Currency = "PHP", n
   // ── Income ────────────────────────────────────────────────
   m =
     input.match(/^(?:add|log|record)\s+(?:an?\s+)?(?:income|earnings?|payout)\s*:?\s+(.+)$/i) ??
-    input.match(/^(?:i\s+)?(?:earned|made)\s+(?:an?\s+)?(.+)$/i);
+    input.match(/^(?:i\s+)?(?:earned|made|received)\s+(?:an?\s+)?(.+)$/i);
   if (m) {
     const parsed = parseAmount(m[1]!, defaultCurrency);
     if (!parsed) return null;
@@ -394,3 +469,60 @@ function splitTitleContent(raw: string): [string, string] {
   return [title || "Untitled", content];
 }
 
+/**
+ * Extract structured action JSON blocks emitted by LLMs.
+ * Format: ```stxic-action\n{ "kind": "addToSavings", ... }\n```
+ */
+export function parseActionFromLlmResponse(text: string): {
+  cleanText: string;
+  action: AiAction | null;
+} {
+  const blockMatch = text.match(/```stxic-action\s*([\s\S]*?)\s*```/i);
+  if (!blockMatch) {
+    // Also check for trailing raw JSON object if prefixed with {"kind": ...}
+    const rawJsonMatch = text.match(/\{[\s\r\n]*"kind"[\s\r\n]*:[\s\S]*\}$/);
+    if (rawJsonMatch) {
+      try {
+        const obj = JSON.parse(rawJsonMatch[0]) as AiAction;
+        if (isValidAiAction(obj)) {
+          const cleanText = text.slice(0, rawJsonMatch.index).trim();
+          return { cleanText, action: obj };
+        }
+      } catch {
+        // ignore malformed JSON
+      }
+    }
+    return { cleanText: text, action: null };
+  }
+
+  const rawJson = blockMatch[1]!.trim();
+  let action: AiAction | null = null;
+  try {
+    const obj = JSON.parse(rawJson) as AiAction;
+    if (isValidAiAction(obj)) {
+      action = obj;
+    }
+  } catch {
+    action = null;
+  }
+
+  const cleanText = text.replace(blockMatch[0], "").trim();
+  return { cleanText, action };
+}
+
+function isValidAiAction(obj: unknown): obj is AiAction {
+  if (!obj || typeof obj !== "object") return false;
+  const kind = (obj as { kind?: string }).kind;
+  return typeof kind === "string" && [
+    "task",
+    "completeTask",
+    "income",
+    "expense",
+    "note",
+    "savingsGoal",
+    "account",
+    "addToSavings",
+    "habit",
+    "checkHabit",
+  ].includes(kind);
+}
