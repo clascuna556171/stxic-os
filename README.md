@@ -1,4 +1,4 @@
-# Stxic — Personal Life OS
+# Stxic : Personal Life OS
 
 A privacy-first, open-source **Personal Life OS** for students and developers.
 Merges KeepR-style life management (vault, notes, tasks, income, world clocks)
