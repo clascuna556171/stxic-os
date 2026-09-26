@@ -19,15 +19,13 @@ architecture and boundaries is in `docs/`.
 - **AI prompts** are centralized in `lib/ai/prompts.ts`.
 - **Feature flags** live in `lib/config/features.ts` — every non-core surface is
   gated.
-- **Cross-feature data flows only through `lib/hydrate.ts`.** Respect the
-  cross-agent ownership boundaries listed in the master context.
+- **Cross-feature data flows only through `lib/hydrate.ts`.** Keep feature
+  boundaries explicit when adding integrations.
 
 ## UI craft
 
-All UI work must follow [`docs/AGENT_UI_SKILL.md`](docs/AGENT_UI_SKILL.md)
-(adapted from `impeccable` + `taste-skill`): anti-slop rules, the locked design
-dials, WCAG AA contrast, reduced-motion safety, and full interactive states
-(loading / empty / error / active).
+All UI work must follow the design dials, WCAG AA contrast, reduced-motion
+safety, and full interactive states (loading / empty / error / active).
 
 ## Before you submit
 

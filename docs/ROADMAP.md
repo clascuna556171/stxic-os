@@ -23,8 +23,8 @@
 - [x] `lib/hydrate.ts` all collections
 - [x] feature flags + hidden nav
 - [x] route stubs + `docs/API.md`
-### UI System (AGENT UI)
-- [x] UI craft skill adopted (AGENT_UI_SKILL.md: anti-slop, 3 dials, a11y, motion)
+### UI System
+- [x] UI craft conventions documented in `CONTRIBUTING.md`
 - [x] design tokens dark + light
 - [x] preset registry (Stxc, Mars, Midnight, Mono)
 - [x] accent picker + live preview

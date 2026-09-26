@@ -119,7 +119,6 @@ c:/Users/Sebaz/stxic/
 ├── .firebaserc                           # Firebase CLI project binding (demo-stxic)
 ├── .gitattributes / .gitignore           # Git ignore & attribute definitions
 ├── .prettierrc.json / .prettierignore   # Formatting configuration (Tailwind plugin)
-├── AGENTS.md                             # Next.js agent rule enforcement block
 ├── capacitor.config.ts                   # Capacitor 8 Android runtime configuration
 ├── CONTRIBUTING.md                       # Open-source contribution guidelines
 ├── eslint.config.mjs                     # ESLint 9 flat configuration with next core-web-vitals
@@ -374,18 +373,7 @@ c:/Users/Sebaz/stxic/
 ├── types/
 │   └── index.ts                          # Master TypeScript domain model & contract
 │
-├── docs/                                 # Architecture, Agent Specifications & Roadmaps
-│   ├── AGENT_AI.md                       # AI specifications (Groq, Ollama, Study Planner)
-│   ├── AGENT_API_ORCHESTRATION.md        # API routes, envelope contract, proxy rules
-│   ├── AGENT_AUTH_DB.md                  # Auth & Database ownership & collection layout
-│   ├── AGENT_BACKUP_DEMO.md              # .stxbak format & Demo sandbox specifications
-│   ├── AGENT_BADS_DE.md                  # Blackboard sync & deadline risk engine docs
-│   ├── AGENT_CORE_FEATURES.md            # Vault, Notes, Tasks, Finance specs
-│   ├── AGENT_EXTRAS.md                   # Converter, Habits, Semester planner specs
-│   ├── AGENT_NEWS_X.md                   # RSS news hub specifications
-│   ├── AGENT_OBSIDIAN_HYBRID.md          # Obsidian Live REST API & hybrid sync docs
-│   ├── AGENT_UI_DESIGN.md                # UI design, presets & accessibility specs
-│   ├── AGENT_UI_SKILL.md                 # UI craft standards & anti-slop guidelines
+├── docs/                                 # Architecture, API & project roadmaps
 │   ├── API.md                            # Comprehensive API route catalog & statuses
 │   ├── badsde.md                         # BADS-DE original specification
 │   ├── BUILD_APK.md                      # Step-by-step Capacitor Android build manual

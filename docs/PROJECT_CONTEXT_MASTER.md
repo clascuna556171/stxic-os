@@ -17,9 +17,9 @@ and encrypted backups. One codebase → web now, Android APK in a future update.
 - **Optimize = app performance**: Core Web Vitals + lean bundles + smart reads.
 - Dark + light themes, minimal "SpaceX meets macOS" aesthetic, fully
   re-skinnable via presets + accent picker.
-- **UI craft floor:** ALL UI work must follow `AGENT_UI_SKILL.md` (adapted
-  from impeccable + taste-skill) — anti-slop rules, the 3 dials (locked),
-  full interactive states, reduced-motion, WCAG AA, CWV budget.
+- **UI craft floor:** ALL UI work must follow the design conventions in
+  `CONTRIBUTING.md` — full interactive states, reduced-motion, WCAG AA, and
+  the Core Web Vitals budget.
 
 ## Tech Stack (FIXED)
 - **Frontend:** Next.js 14+ (App Router), React 18/19, TypeScript

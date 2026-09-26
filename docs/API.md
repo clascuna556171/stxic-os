@@ -50,7 +50,7 @@ httpOnly cookie `stxic_session`.
 
 > **Obsidian has NO server route** — live sync is client-side only
 > (`lib/obsidian/client.ts`), because the Next.js server cannot reach the
-> user's `127.0.0.1`. See `AGENT_OBSIDIAN_HYBRID.md`.
+> user's `127.0.0.1`. See `OBSIDIAN_SETUP.md`.
 
 ## Data Access
 
