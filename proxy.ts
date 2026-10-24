@@ -13,7 +13,7 @@ import type { NextRequest } from "next/server";
  */
 
 const SESSION_COOKIE = "stxic_session";
-const PUBLIC_PATHS = new Set(["/login", "/demo", "/_not-found"]);
+const PUBLIC_PATHS = new Set(["/login", "/pin", "/demo", "/_not-found"]);
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;

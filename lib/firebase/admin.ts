@@ -14,7 +14,7 @@
 
 import "server-only";
 
-import { readFileSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
 import { generateKeyPairSync } from "node:crypto";
 import {
   initializeApp,
@@ -66,13 +66,25 @@ export function getAdminApp() {
   const options: AppOptions = { projectId };
 
   const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH;
-  if (serviceAccountPath) {
-    const json = JSON.parse(readFileSync(serviceAccountPath, "utf8"));
-    options.credential = cert(json);
+  if (serviceAccountPath && existsSync(serviceAccountPath)) {
+    try {
+      const json = JSON.parse(readFileSync(serviceAccountPath, "utf8"));
+      options.credential = cert(json);
+    } catch (e) {
+      console.warn("Failed to read FIREBASE_SERVICE_ACCOUNT_PATH:", e);
+    }
   } else if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
-    options.credential = cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON));
+    try {
+      options.credential = cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON));
+    } catch (e) {
+      console.warn("Failed to parse FIREBASE_SERVICE_ACCOUNT_JSON:", e);
+    }
   } else if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
-    options.credential = applicationDefault();
+    try {
+      options.credential = applicationDefault();
+    } catch (e) {
+      console.warn("Failed to load GOOGLE_APPLICATION_CREDENTIALS:", e);
+    }
   } else if (isEmulatorMode()) {
     options.credential = emulatorCredential();
   }

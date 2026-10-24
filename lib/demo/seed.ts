@@ -31,6 +31,7 @@ import {
   saveVaultItem,
 } from "@/lib/hydrate";
 import { toISODate } from "@/lib/utils/dates";
+import { isLocalDemoActive, clearLocalDemoStorage } from "@/lib/demo/local";
 import type {
   FinanceAccount,
   FocusSession,
@@ -435,6 +436,11 @@ export async function seedDemoData(): Promise<void> {
 
 /** Wipe and re-seed the demo account ("Start fresh"). */
 export async function resetDemo(): Promise<void> {
+  if (isLocalDemoActive()) {
+    clearLocalDemoStorage();
+    await seedDemoData();
+    return;
+  }
   const [vault, notes, tasks, transactions, accounts, goals, habits, focus] = await Promise.all([
     listVault(),
     listNotes(),

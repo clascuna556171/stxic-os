@@ -8,9 +8,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { doc, setDoc } from "firebase/firestore";
+import { getDb } from "@/lib/firebase/client";
 import { getProfile, getSettings } from "@/lib/hydrate";
 import { setPin, saveMasterPassword, verifyPin } from "@/lib/auth/actions";
 import {
+  constantTimeEqual,
   deriveKey,
   encryptString,
   exportDek,
@@ -92,9 +95,25 @@ export default function PinPage() {
         const wrappedDekPin = await wrapDek(pin, pinSalt, rawDek);
         const res = await setPin({ pinSalt, pinHash, wrappedDekPin });
         if (!res.ok) {
-          setError(res.error);
-          setBusy(false);
-          return;
+          // Client-side Firestore fallback
+          try {
+            if (!user) throw new Error("No user");
+            await setDoc(
+              doc(getDb(), "users", user.uid, "settings", "main"),
+              {
+                pinSalt,
+                pinHash,
+                wrappedDekPin,
+                updatedAt: Date.now(),
+              },
+              { merge: true },
+            );
+            await setDoc(doc(getDb(), "users", user.uid), { hasPin: true }, { merge: true });
+          } catch (fallbackErr) {
+            setError(res.error || (fallbackErr as Error).message);
+            setBusy(false);
+            return;
+          }
         }
         const dek = await importDek(rawDek);
         unlock(dek);
@@ -104,7 +123,7 @@ export default function PinPage() {
         setBusy(false);
       }
     },
-    [pin, unlock, router],
+    [pin, unlock, router, user],
   );
 
   const handleBiometric = useCallback(async () => {
@@ -129,16 +148,37 @@ export default function PinPage() {
     setError("");
     try {
       const res = await verifyPin(pin);
-      if (!res.ok) {
-        setError("Incorrect PIN.");
-        setPinState("");
-        setBusy(false);
+      if (res.ok) {
+        const raw = await unwrapDek(pin, res.data.pinSalt, res.data.wrappedDekPin);
+        const dek = await importDek(raw);
+        unlock(dek);
+        router.replace("/dashboard");
         return;
       }
-      const raw = await unwrapDek(pin, res.data.pinSalt, res.data.wrappedDekPin);
-      const dek = await importDek(raw);
-      unlock(dek);
-      router.replace("/dashboard");
+      // Direct client-side verification fallback
+      try {
+        const settings = await getSettings();
+        if (
+          settings.ok &&
+          settings.data.pinSalt &&
+          settings.data.pinHash &&
+          settings.data.wrappedDekPin
+        ) {
+          const hash = await hashSecret(pin, settings.data.pinSalt);
+          if (constantTimeEqual(hash, settings.data.pinHash)) {
+            const raw = await unwrapDek(pin, settings.data.pinSalt, settings.data.wrappedDekPin);
+            const dek = await importDek(raw);
+            unlock(dek);
+            router.replace("/dashboard");
+            return;
+          }
+        }
+      } catch {
+        // fallback failed, display incorrect PIN
+      }
+      setError("Incorrect PIN.");
+      setPinState("");
+      setBusy(false);
     } catch {
       setError("Incorrect PIN.");
       setPinState("");
@@ -161,9 +201,26 @@ export default function PinPage() {
       const wrapped = await encryptString(kek, raw);
       const res = await saveMasterPassword({ encKeySalt: salt, wrappedDekMaster: wrapped });
       if (!res.ok) {
-        setError(res.error);
-        setBusy(false);
-        return;
+        // Client-side Firestore fallback
+        try {
+          if (!user) throw new Error("No user");
+          await setDoc(
+            doc(getDb(), "users", user.uid),
+            {
+              encKeySalt: salt,
+              wrappedDekMaster: wrapped,
+              email: user.email ?? "",
+              uid: user.uid,
+              createdAt: Date.now(),
+              plan: "free",
+            },
+            { merge: true },
+          );
+        } catch (fallbackErr) {
+          setError(res.error || (fallbackErr as Error).message);
+          setBusy(false);
+          return;
+        }
       }
       setDekRaw(raw);
       setPhase("onboardPin");
@@ -172,7 +229,7 @@ export default function PinPage() {
       setError("Something went wrong. Try again.");
       setBusy(false);
     }
-  }, [master, masterConfirm]);
+  }, [master, masterConfirm, user]);
 
   const handleRecoverMaster = useCallback(async () => {
     setBusy(true);

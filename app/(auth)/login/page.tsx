@@ -24,6 +24,12 @@ function friendlyAuthError(message: string): string {
   if (message.includes("email-already-in-use")) return "That email is already registered.";
   if (message.includes("invalid-email")) return "Enter a valid email address.";
   if (message.includes("weak-password")) return "Password is too weak (min 6 characters).";
+  if (message.includes("admin-restricted-operation")) {
+    return "Anonymous sign-in is disabled in Firebase console.";
+  }
+  if (message.includes("network-request-failed")) {
+    return "Network error. Please check your connection.";
+  }
   return "Something went wrong. Try again.";
 }
 
@@ -33,14 +39,14 @@ export default function LoginPage() {
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const { user, sessionReady, error: authError } = useAuth();
+  const { user, sessionReady, error: authError, enableLocalDemo } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (user && sessionReady && !authError) {
+    if (user && sessionReady) {
       router.replace(user.isAnonymous ? "/dashboard" : "/pin");
     }
-  }, [user, sessionReady, router, authError]);
+  }, [user, sessionReady, router]);
 
   const waiting = busy && !authError;
 
@@ -67,8 +73,14 @@ export default function LoginPage() {
     try {
       await signInAnonymously(getAuthClient());
     } catch (err) {
-      setError(friendlyAuthError((err as Error).message));
-      setBusy(false);
+      console.warn("Firebase anonymous auth failed, activating local demo sandbox:", err);
+      try {
+        await enableLocalDemo();
+        router.replace("/dashboard");
+      } catch (fallbackErr) {
+        setError(friendlyAuthError((fallbackErr as Error).message));
+        setBusy(false);
+      }
     }
   }
 

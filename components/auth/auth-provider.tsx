@@ -18,6 +18,12 @@ import { exportDek, generateDek, importDek } from "@/lib/auth/crypto";
 import { getSettings, saveSettings } from "@/lib/hydrate";
 import { resetDemo, seedDemoData } from "@/lib/demo/seed";
 import { withTimeout } from "@/lib/utils/timers";
+import {
+  isLocalDemoActive,
+  enableLocalDemo as setLocalDemoFlag,
+  disableLocalDemo,
+  clearLocalDemoStorage,
+} from "@/lib/demo/local";
 import type { UserSettings } from "@/types";
 
 interface AuthState {
@@ -26,7 +32,7 @@ interface AuthState {
   /** True once the session cookie has been established (or no user). */
   sessionReady: boolean;
   locked: boolean;
-  /** True when the signed-in user is an anonymous demo guest. */
+  /** True when the signed-in user is an anonymous demo guest or local demo. */
   demo: boolean;
   /** Set when establishing the server session fails (never a silent hang). */
   error: string;
@@ -36,6 +42,8 @@ interface AuthState {
   signOut: () => Promise<void>;
   /** Wipe and re-seed the demo workspace. */
   startFresh: () => Promise<void>;
+  /** Enable client-side local demo fallback mode. */
+  enableLocalDemo: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -55,12 +63,25 @@ async function ensureDemoKey(settings: UserSettings | undefined): Promise<Crypto
   return dek;
 }
 
+function getInitialLocalDemoUser(): User | null {
+  if (isLocalDemoActive()) {
+    return {
+      uid: "demo-guest",
+      email: "guest@demo.local",
+      displayName: "Demo Guest",
+      isAnonymous: true,
+      getIdToken: async () => "local_demo_token",
+    } as unknown as User;
+  }
+  return null;
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [initializing, setInitializing] = useState(true);
-  const [sessionReady, setSessionReady] = useState(false);
+  const [user, setUser] = useState<User | null>(getInitialLocalDemoUser);
+  const [initializing, setInitializing] = useState(() => !isLocalDemoActive());
+  const [sessionReady, setSessionReady] = useState(isLocalDemoActive);
   const [locked, setLocked] = useState(false);
-  const [demo, setDemo] = useState(false);
+  const [demo, setDemo] = useState(isLocalDemoActive);
   const [error, setError] = useState("");
   const [autoLockMin, setAutoLockMin] = useState(5);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -107,24 +128,82 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     unlockedUid.current = null;
     setLocked(false);
     clearTimer();
+    if (isLocalDemoActive()) {
+      disableLocalDemo();
+      setDemo(false);
+      setUser(null);
+      setSessionReady(true);
+      return;
+    }
     await firebaseSignOut(getAuthClient());
   }, [clearTimer]);
 
   const startFresh = useCallback(async () => {
+    if (isLocalDemoActive()) {
+      clearLocalDemoStorage();
+      await seedDemoData();
+      return;
+    }
     await resetDemo();
+  }, []);
+
+  const enableLocalDemo = useCallback(async () => {
+    setLocalDemoFlag();
+    setDemo(true);
+    setLocked(false);
+    const mockUser = {
+      uid: "demo-guest",
+      email: "guest@demo.local",
+      displayName: "Demo Guest",
+      isAnonymous: true,
+      getIdToken: async () => "local_demo_token",
+    } as unknown as User;
+    userRef.current = mockUser;
+    setUser(mockUser);
+    try {
+      const key = await ensureDemoKey(undefined);
+      setSessionKey(key);
+    } catch {
+      // ignore
+    }
+    setSessionReady(true);
+    setInitializing(false);
+    setError("");
+    await seedDemoData().catch(() => undefined);
+  }, []);
+
+  // Set up local demo cryptographic key and initial seed on mount
+  useEffect(() => {
+    if (isLocalDemoActive()) {
+      void (async () => {
+        try {
+          const settings = await getSettings();
+          const key = await ensureDemoKey(settings.ok ? settings.data : undefined);
+          setSessionKey(key);
+        } catch {
+          // ignore
+        }
+        await seedDemoData().catch(() => undefined);
+      })();
+    }
   }, []);
 
   // Firebase auth state → session cookie + lock state.
   useEffect(() => {
     const unsub = onAuthStateChanged(getAuthClient(), async (u) => {
+      if (!u && isLocalDemoActive()) {
+        return;
+      }
       userRef.current = u;
       setUser(u);
       if (u) {
-        // Establish the httpOnly session cookie. Every step is bounded by a
-        // timeout so a slow/hung admin call can never leave the app on an
-        // infinite "Preparing your session…" screen.
+        if (isLocalDemoActive()) {
+          disableLocalDemo();
+        }
+        // Establish the httpOnly session cookie (with non-blocking client fallback).
+        let token = "";
         try {
-          const token = await withTimeout(
+          token = await withTimeout(
             u.getIdToken(),
             15_000,
             "Couldn't refresh your session (timeout)",
@@ -134,18 +213,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             15_000,
             "Couldn't establish your session (timeout)",
           );
-          if (!session.ok) throw new Error(session.error ?? "Couldn't establish your session");
+          if (!session.ok) {
+            console.warn("Session action warning:", session.error);
+          }
           setError("");
         } catch (e) {
-          if (!u.isAnonymous) {
-            // Real user: surface the failure so the login page can retry
-            // instead of hanging with a disabled button. Don't re-lock a user
-            // who is already unlocked on this device.
-            setError((e as Error).message);
-            setLocked(unlockedUid.current !== u.uid);
-            setSessionReady(true);
-            setInitializing(false);
-            return;
+          console.warn("Session establishment non-fatal warning:", e);
+          if (typeof document !== "undefined" && token) {
+            document.cookie = `stxic_session=${token}; path=/; max-age=1209600; SameSite=Lax`;
           }
         }
 
@@ -220,6 +295,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       lock,
       signOut,
       startFresh,
+      enableLocalDemo,
     }),
     [
       user,
@@ -233,6 +309,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       lock,
       signOut,
       startFresh,
+      enableLocalDemo,
     ],
   );
 

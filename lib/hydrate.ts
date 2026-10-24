@@ -22,6 +22,7 @@ import {
 import { getAuthClient, getDb } from "@/lib/firebase/client";
 import { getSessionKey } from "@/lib/auth/key-holder";
 import { decryptString, encryptString } from "@/lib/auth/crypto";
+import { isLocalDemoActive } from "@/lib/demo/local";
 import type {
   BlackboardFeed,
   Envelope,
@@ -75,6 +76,15 @@ function currentUid(): string | null {
 // ─────────────────────────────────────────────────────────────
 
 async function readEncrypted<T>(name: string): Promise<Envelope<T[]>> {
+  if (isLocalDemoActive()) {
+    try {
+      const raw = window.localStorage.getItem(`stxic_demo_${name}`);
+      const data = raw ? (JSON.parse(raw) as T[]) : [];
+      return { ok: true, data };
+    } catch (error) {
+      return { ok: false, error: (error as Error).message };
+    }
+  }
   const uid = currentUid();
   if (!uid) return { ok: false, error: "Unauthorized" };
   const key = getSessionKey();
@@ -100,6 +110,19 @@ async function writeEncrypted<T extends { id: string }>(
   name: string,
   item: T,
 ): Promise<Envelope<T>> {
+  if (isLocalDemoActive()) {
+    try {
+      const raw = window.localStorage.getItem(`stxic_demo_${name}`);
+      const items = raw ? (JSON.parse(raw) as T[]) : [];
+      const idx = items.findIndex((x) => x.id === item.id);
+      if (idx >= 0) items[idx] = item;
+      else items.push(item);
+      window.localStorage.setItem(`stxic_demo_${name}`, JSON.stringify(items));
+      return { ok: true, data: item };
+    } catch (error) {
+      return { ok: false, error: (error as Error).message };
+    }
+  }
   const uid = currentUid();
   if (!uid) return { ok: false, error: "Unauthorized" };
   const key = getSessionKey();
@@ -117,6 +140,17 @@ async function writeEncrypted<T extends { id: string }>(
 }
 
 async function removeEncrypted(name: string, id: string): Promise<Envelope<null>> {
+  if (isLocalDemoActive()) {
+    try {
+      const raw = window.localStorage.getItem(`stxic_demo_${name}`);
+      const items = raw ? (JSON.parse(raw) as { id: string }[]) : [];
+      const filtered = items.filter((x) => x.id !== id);
+      window.localStorage.setItem(`stxic_demo_${name}`, JSON.stringify(filtered));
+      return { ok: true, data: null };
+    } catch (error) {
+      return { ok: false, error: (error as Error).message };
+    }
+  }
   const uid = currentUid();
   if (!uid) return { ok: false, error: "Unauthorized" };
   try {
@@ -178,6 +212,20 @@ export const deleteFocusSession = (id: string) => removeEncrypted("focusSessions
 // ─────────────────────────────────────────────────────────────
 
 export async function getProfile(): Promise<Envelope<UserProfile>> {
+  if (isLocalDemoActive()) {
+    return {
+      ok: true,
+      data: {
+        uid: "demo-guest",
+        email: "guest@demo.local",
+        createdAt: Date.now(),
+        encKeySalt: "",
+        wrappedDekMaster: "",
+        hasPin: true,
+        plan: "free",
+      },
+    };
+  }
   const uid = currentUid();
   if (!uid) return { ok: false, error: "Unauthorized" };
   try {
@@ -194,6 +242,22 @@ export async function getProfile(): Promise<Envelope<UserProfile>> {
 // ─────────────────────────────────────────────────────────────
 
 export async function getSettings(): Promise<Envelope<UserSettings>> {
+  if (isLocalDemoActive()) {
+    try {
+      const raw = window.localStorage.getItem("stxic_demo_settings");
+      const data = raw ? (JSON.parse(raw) as Partial<UserSettings>) : {};
+      return {
+        ok: true,
+        data: {
+          ...DEFAULT_SETTINGS,
+          obsidian: { ...DEFAULT_SETTINGS.obsidian, ...(data?.obsidian ?? {}) },
+          ...data,
+        },
+      };
+    } catch (error) {
+      return { ok: false, error: (error as Error).message };
+    }
+  }
   const uid = currentUid();
   if (!uid) return { ok: false, error: "Unauthorized" };
   try {
@@ -213,6 +277,19 @@ export async function getSettings(): Promise<Envelope<UserSettings>> {
 }
 
 export async function saveSettings(patch: Partial<UserSettings>): Promise<Envelope<null>> {
+  if (isLocalDemoActive()) {
+    try {
+      const raw = window.localStorage.getItem("stxic_demo_settings");
+      const data = raw ? (JSON.parse(raw) as Partial<UserSettings>) : {};
+      window.localStorage.setItem(
+        "stxic_demo_settings",
+        JSON.stringify({ ...data, ...patch, updatedAt: Date.now() }),
+      );
+      return { ok: true, data: null };
+    } catch (error) {
+      return { ok: false, error: (error as Error).message };
+    }
+  }
   const uid = currentUid();
   if (!uid) return { ok: false, error: "Unauthorized" };
   try {
@@ -264,6 +341,15 @@ export async function saveObsidianConfig(cfg: UserSettings["obsidian"]): Promise
 // ─────────────────────────────────────────────────────────────
 
 export async function getNewsConfig(): Promise<Envelope<NewsConfig>> {
+  if (isLocalDemoActive()) {
+    try {
+      const raw = window.localStorage.getItem("stxic_demo_newsConfig");
+      const data = (raw ? JSON.parse(raw) : { sources: [], saved: [], readLater: [] }) as NewsConfig;
+      return { ok: true, data };
+    } catch (error) {
+      return { ok: false, error: (error as Error).message };
+    }
+  }
   const uid = currentUid();
   if (!uid) return { ok: false, error: "Unauthorized" };
   try {
@@ -280,6 +366,14 @@ export async function getNewsConfig(): Promise<Envelope<NewsConfig>> {
 }
 
 export async function saveNewsConfig(cfg: NewsConfig): Promise<Envelope<null>> {
+  if (isLocalDemoActive()) {
+    try {
+      window.localStorage.setItem("stxic_demo_newsConfig", JSON.stringify(cfg));
+      return { ok: true, data: null };
+    } catch (error) {
+      return { ok: false, error: (error as Error).message };
+    }
+  }
   const uid = currentUid();
   if (!uid) return { ok: false, error: "Unauthorized" };
   try {
@@ -291,6 +385,15 @@ export async function saveNewsConfig(cfg: NewsConfig): Promise<Envelope<null>> {
 }
 
 export async function getBlackboard(): Promise<Envelope<BlackboardFeed>> {
+  if (isLocalDemoActive()) {
+    try {
+      const raw = window.localStorage.getItem("stxic_demo_blackboard");
+      const data = (raw ? JSON.parse(raw) : { events: [], mirrored: [] }) as BlackboardFeed;
+      return { ok: true, data };
+    } catch (error) {
+      return { ok: false, error: (error as Error).message };
+    }
+  }
   const uid = currentUid();
   if (!uid) return { ok: false, error: "Unauthorized" };
   try {
@@ -303,6 +406,14 @@ export async function getBlackboard(): Promise<Envelope<BlackboardFeed>> {
 }
 
 export async function saveBlackboard(feed: BlackboardFeed): Promise<Envelope<null>> {
+  if (isLocalDemoActive()) {
+    try {
+      window.localStorage.setItem("stxic_demo_blackboard", JSON.stringify(feed));
+      return { ok: true, data: null };
+    } catch (error) {
+      return { ok: false, error: (error as Error).message };
+    }
+  }
   const uid = currentUid();
   if (!uid) return { ok: false, error: "Unauthorized" };
   try {
@@ -316,6 +427,15 @@ export async function saveBlackboard(feed: BlackboardFeed): Promise<Envelope<nul
 // ── FX cache (frankfurter) ───────────────────────────────────
 
 export async function getFxRate(base: string, quote: string): Promise<Envelope<FxCache>> {
+  if (isLocalDemoActive()) {
+    try {
+      const raw = window.localStorage.getItem(`stxic_demo_fxCache_${base}_${quote}`);
+      if (!raw) return { ok: false, error: "No cached rate" };
+      return { ok: true, data: JSON.parse(raw) as FxCache };
+    } catch (error) {
+      return { ok: false, error: (error as Error).message };
+    }
+  }
   const uid = currentUid();
   if (!uid) return { ok: false, error: "Unauthorized" };
   try {
@@ -328,6 +448,14 @@ export async function getFxRate(base: string, quote: string): Promise<Envelope<F
 }
 
 export async function saveFxRate(rate: FxCache): Promise<Envelope<null>> {
+  if (isLocalDemoActive()) {
+    try {
+      window.localStorage.setItem(`stxic_demo_fxCache_${rate.base}_${rate.quote}`, JSON.stringify(rate));
+      return { ok: true, data: null };
+    } catch (error) {
+      return { ok: false, error: (error as Error).message };
+    }
+  }
   const uid = currentUid();
   if (!uid) return { ok: false, error: "Unauthorized" };
   try {
