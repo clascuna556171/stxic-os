@@ -31,7 +31,7 @@ import type { BiometricConfig } from "@/types";
 type Phase = "loading" | "verify" | "onboardMaster" | "onboardPin" | "recoverMaster" | "recoverPin";
 
 export default function PinPage() {
-  const { user, initializing, unlock, demo } = useAuth();
+  const { user, initializing, unlock, demo, signOut } = useAuth();
   const router = useRouter();
 
   const [phase, setPhase] = useState<Phase>("loading");
@@ -495,6 +495,18 @@ export default function PinPage() {
           </>
         ) : null}
       </Card>
+      <div className="mt-4 text-center">
+        <button
+          type="button"
+          className="text-muted hover:text-foreground text-xs transition-colors"
+          onClick={async () => {
+            await signOut();
+            router.replace("/login");
+          }}
+        >
+          Sign out of this account
+        </button>
+      </div>
     </main>
   );
 }

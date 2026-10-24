@@ -15,6 +15,7 @@
 import "server-only";
 
 import { readFileSync, existsSync } from "node:fs";
+import { resolve } from "node:path";
 import { generateKeyPairSync } from "node:crypto";
 import {
   initializeApp,
@@ -66,9 +67,16 @@ export function getAdminApp() {
   const options: AppOptions = { projectId };
 
   const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH;
-  if (serviceAccountPath && existsSync(serviceAccountPath)) {
+  const resolvedServiceAccountPath = serviceAccountPath
+    ? existsSync(serviceAccountPath)
+      ? serviceAccountPath
+      : existsSync(resolve(/*turbopackIgnore: true*/ process.cwd(), serviceAccountPath))
+        ? resolve(/*turbopackIgnore: true*/ process.cwd(), serviceAccountPath)
+        : null
+    : null;
+  if (resolvedServiceAccountPath) {
     try {
-      const json = JSON.parse(readFileSync(serviceAccountPath, "utf8"));
+      const json = JSON.parse(readFileSync(resolvedServiceAccountPath, "utf8"));
       options.credential = cert(json);
     } catch (e) {
       console.warn("Failed to read FIREBASE_SERVICE_ACCOUNT_PATH:", e);

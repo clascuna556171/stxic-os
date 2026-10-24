@@ -151,7 +151,15 @@ export async function saveMasterPassword(input: {
   try {
     await getAdminDb()
       .doc(`${PROFILE_COLLECTION}/${uid}`)
-      .update({ encKeySalt: input.encKeySalt, wrappedDekMaster: input.wrappedDekMaster });
+      .set(
+        {
+          encKeySalt: input.encKeySalt,
+          wrappedDekMaster: input.wrappedDekMaster,
+          uid,
+          updatedAt: Date.now(),
+        },
+        { merge: true },
+      );
     return { ok: true, data: null };
   } catch (error) {
     return { ok: false, error: (error as Error).message };
@@ -180,7 +188,9 @@ export async function setPin(input: {
       },
       { merge: true },
     );
-    await getAdminDb().doc(`${PROFILE_COLLECTION}/${uid}`).update({ hasPin: true });
+    await getAdminDb()
+      .doc(`${PROFILE_COLLECTION}/${uid}`)
+      .set({ hasPin: true, uid, updatedAt: Date.now() }, { merge: true });
     return { ok: true, data: null };
   } catch (error) {
     return { ok: false, error: (error as Error).message };
@@ -226,7 +236,7 @@ export async function saveBiometric(
   try {
     await getAdminDb()
       .doc(`${PROFILE_COLLECTION}/${uid}`)
-      .update({ biometric: config ?? null });
+      .set({ biometric: config ?? null, uid, updatedAt: Date.now() }, { merge: true });
     return { ok: true, data: null };
   } catch (error) {
     return { ok: false, error: (error as Error).message };
@@ -240,7 +250,7 @@ export async function clearBiometric(): Promise<Envelope<null>> {
   try {
     await getAdminDb()
       .doc(`${PROFILE_COLLECTION}/${uid}`)
-      .update({ biometric: null });
+      .set({ biometric: null, uid, updatedAt: Date.now() }, { merge: true });
     return { ok: true, data: null };
   } catch (error) {
     return { ok: false, error: (error as Error).message };
