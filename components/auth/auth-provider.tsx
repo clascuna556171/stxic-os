@@ -166,14 +166,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     unlockedUid.current = null;
     setLocked(false);
     clearTimer();
+    if (typeof document !== "undefined") {
+      document.cookie = "stxic_session=; path=/; max-age=0; SameSite=Lax";
+    }
     if (isLocalDemoActive()) {
       disableLocalDemo();
+      userRef.current = null;
       setDemo(false);
       setUser(null);
       setSessionReady(true);
       return;
     }
-    await firebaseSignOut(getAuthClient());
+    await endSession().catch(() => undefined);
+    await firebaseSignOut(getAuthClient()).catch(() => undefined);
   }, [clearTimer]);
 
   const startFresh = useCallback(async () => {
@@ -240,23 +245,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!u && isLocalDemoActive()) {
         return;
       }
-      userRef.current = u;
-      setUser(u);
       if (u) {
         if (isLocalDemoActive()) {
           disableLocalDemo();
         }
-        // Establish the httpOnly session cookie (with non-blocking client fallback).
+        // Mark session not ready BEFORE setting user so /login waits for the
+        // stxic_session cookie before navigating to /pin or /dashboard.
+        setSessionReady(false);
+        setDemo(u.isAnonymous);
+        setLocked(!u.isAnonymous && unlockedUid.current !== u.uid);
+        userRef.current = u;
+        setUser(u);
+
+        // Establish the session cookie (set client fallback cookie immediately
+        // once the ID token resolves so proxy.ts never bounces navigation).
         let token = "";
         try {
           token = await withTimeout(
             u.getIdToken(),
-            15_000,
+            10_000,
             "Couldn't refresh your session (timeout)",
           );
+          if (typeof document !== "undefined" && token) {
+            document.cookie = `stxic_session=${token}; path=/; max-age=1209600; SameSite=Lax`;
+          }
           const session = await withTimeout(
             establishSession(token),
-            15_000,
+            6_000,
             "Couldn't establish your session (timeout)",
           );
           if (!session.ok) {
@@ -273,7 +288,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (u.isAnonymous) {
           // Demo guests never lock: a local random DEK unlocks everything, and
           // a seed/network failure is non-fatal.
-          const settings = await withTimeout(getSettings(), 10_000, "Couldn't load settings").catch(
+          const settings = await withTimeout(getSettings(), 8_000, "Couldn't load settings").catch(
             () => undefined,
           );
           if (settings?.ok && settings.data.autoLockMin) {
@@ -293,22 +308,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return;
         }
 
-        setDemo(false);
         // Once a user is unlocked (PIN verified), keep them unlocked through
         // repeated auth-state events — otherwise they'd be sent back to /pin.
         setLocked(unlockedUid.current !== u.uid);
-        const settings = await withTimeout(getSettings(), 10_000, "Couldn't load settings").catch(
-          () => undefined,
-        );
+        const [settings, profile] = await Promise.all([
+          withTimeout(getSettings(), 8_000, "Couldn't load settings").catch(() => undefined),
+          withTimeout(getProfile(), 8_000, "Couldn't load profile").catch(() => undefined),
+        ]);
         if (settings?.ok && settings.data.autoLockMin) {
           setAutoLockMinState(settings.data.autoLockMin);
         }
+        if (profile?.ok && profile.data.displayName && profile.data.displayName !== u.displayName) {
+          setUser((prev) => {
+            if (!prev) return prev;
+            const updated = Object.assign(Object.create(Object.getPrototypeOf(prev)), prev, {
+              displayName: profile.data.displayName,
+            }) as User;
+            userRef.current = updated;
+            return updated;
+          });
+        }
       } else {
+        userRef.current = null;
+        setUser(null);
         clearSessionKey();
         setLocked(false);
         setDemo(false);
         setError("");
-        void endSession();
+        if (typeof document !== "undefined") {
+          document.cookie = "stxic_session=; path=/; max-age=0; SameSite=Lax";
+        }
+        void endSession().catch(() => undefined);
       }
       setSessionReady(true);
       setInitializing(false);

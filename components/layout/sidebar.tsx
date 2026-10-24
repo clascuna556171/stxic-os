@@ -2,41 +2,41 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LogOut, User as UserIcon } from "lucide-react";
+import { LogOut, Moon, User as UserIcon } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { NAV_ITEMS } from "@/components/layout/nav-items";
 import { isEnabled } from "@/lib/config/features";
 import { useAuth } from "@/components/auth/auth-provider";
-import { ThemeToggle } from "@/components/theme/theme-toggle";
-import { Button } from "@/components/ui/button";
+import { useTheme } from "@/components/theme/theme-provider";
+import { Switch } from "@/components/ui/switch";
 import { BrandMark } from "@/components/brand/brand-mark";
 
 export function Sidebar() {
   const pathname = usePathname();
   const { user, demo, signOut } = useAuth();
+  const { theme, setTheme } = useTheme();
 
   const visibleItems = NAV_ITEMS.filter((item) => !item.feature || isEnabled(item.feature));
   const displayName = demo
     ? user?.displayName || "Demo Guest"
     : user?.displayName || (user?.email ? user.email.split("@")[0] : "Account");
-  const subtitle = demo ? "Sandbox session" : (user?.email ?? "Encrypted vault");
   const initial = (displayName || "S").charAt(0).toUpperCase();
 
   return (
-    <aside className="border-border bg-surface hidden w-56 shrink-0 flex-col border-r md:flex">
+    <aside className="border-border bg-surface hidden w-60 shrink-0 flex-col border-r md:flex">
       {/* Brand Header */}
-      <div className="border-border flex h-14 items-center justify-between border-b px-4">
+      <div className="flex h-16 items-center justify-between px-5">
         <Link href="/dashboard" className="flex items-center gap-2.5">
-          <BrandMark size={24} />
-          <span className="text-foreground text-sm font-semibold tracking-tight">Stxic</span>
+          <BrandMark size={26} />
+          <span className="text-foreground text-base font-bold tracking-tight">Stxic</span>
         </Link>
-        <span className="border-border bg-surface-2 text-muted rounded px-1.5 py-0.5 font-mono text-[10px]">
+        <span className="border-border bg-surface-2 text-muted rounded-full border px-2 py-0.5 font-mono text-[10px]">
           v1.5
         </span>
       </div>
 
       {/* Primary Navigation */}
-      <nav className="flex-1 space-y-0.5 overflow-y-auto p-2" aria-label="Main Navigation">
+      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-2" aria-label="Main Navigation">
         {visibleItems.map((item) => {
           const active = pathname.startsWith(item.href);
           return (
@@ -44,57 +44,69 @@ export function Sidebar() {
               key={item.href}
               href={item.href}
               className={cn(
-                "relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+                "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-xs font-medium transition-all",
                 active
-                  ? "bg-surface-2 text-foreground font-medium"
-                  : "text-muted hover:bg-surface-2/60 hover:text-foreground",
+                  ? "bg-accent text-accent-fg font-semibold shadow-[0_6px_20px_-6px_var(--accent)]"
+                  : "text-muted hover:bg-surface-2/70 hover:text-foreground",
               )}
             >
-              {active ? (
-                <span
-                  className="bg-accent absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-r"
-                  aria-hidden
-                />
-              ) : null}
-              <item.icon className={cn("size-4 shrink-0", active && "text-accent")} />
+              <item.icon
+                className={cn(
+                  "size-4 shrink-0 transition-colors",
+                  active ? "text-accent-fg" : "text-muted",
+                )}
+              />
               <span className="truncate">{item.label}</span>
             </Link>
           );
         })}
       </nav>
 
+      {/* Inline Dark Mode Switch Row (matching ref1.png) */}
+      <div className="px-3 pb-3">
+        <div className="bg-surface-2/50 border-border flex items-center justify-between rounded-xl border px-3.5 py-2.5">
+          <div className="flex items-center gap-2.5">
+            <Moon className="text-muted size-4 shrink-0" />
+            <span className="text-muted text-xs font-medium">Dark Mode</span>
+          </div>
+          <Switch
+            checked={theme === "dark"}
+            onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
+            aria-label="Toggle dark mode"
+          />
+        </div>
+      </div>
+
       {/* Account & Session Footer */}
-      <div className="border-border flex flex-col gap-2 border-t p-2.5">
+      <div className="border-border flex items-center justify-between gap-2 border-t px-3 py-3">
         <Link
           href="/settings"
           className={cn(
-            "hover:bg-surface-2 flex items-center gap-2.5 rounded-lg px-2 py-1.5 transition-colors",
+            "hover:bg-surface-2/70 group flex min-w-0 flex-1 items-center gap-2.5 rounded-xl px-2 py-1.5 transition-colors",
             pathname.startsWith("/settings") && "bg-surface-2",
           )}
-          title="Account & Settings"
+          title="Edit Profile & Settings"
         >
-          <div className="border-border bg-surface-2 text-accent flex size-7 shrink-0 items-center justify-center rounded-full border text-xs font-semibold">
-            {initial || <UserIcon className="size-3.5" />}
+          <div className="border-accent/40 bg-accent/15 text-accent flex size-9 shrink-0 items-center justify-center rounded-full border text-xs font-bold">
+            {initial || <UserIcon className="size-4" />}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-foreground truncate text-xs font-medium">{displayName}</p>
-            <p className="text-muted truncate text-[11px]">{subtitle}</p>
+            <p className="text-foreground truncate text-xs font-semibold">{displayName}</p>
+            <p className="text-muted group-hover:text-accent truncate text-[11px] transition-colors">
+              {demo ? "Sandbox · Edit Profile" : "Edit Profile"}
+            </p>
           </div>
         </Link>
 
-        <div className="flex items-center justify-between px-1">
-          <ThemeToggle />
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-muted hover:text-danger h-8 gap-1.5 px-2 text-xs"
-            aria-label="Sign out"
-            onClick={() => void signOut()}
-          >
-            <LogOut className="size-3.5" />
-            <span>Sign out</span>
-          </Button>
-        </div>
+        <button
+          type="button"
+          className="text-muted hover:bg-danger/10 hover:text-danger flex size-8 shrink-0 items-center justify-center rounded-lg transition-colors cursor-pointer"
+          aria-label="Sign out"
+          title="Sign out"
+          onClick={() => void signOut()}
+        >
+          <LogOut className="size-4" />
+        </button>
       </div>
     </aside>
   );

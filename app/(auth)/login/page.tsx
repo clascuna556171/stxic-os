@@ -8,9 +8,8 @@ import {
   signInAnonymously,
   signInWithEmailAndPassword,
 } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
 import { AlertCircle, ArrowLeft, CheckCircle2, Eye, EyeOff, RefreshCw } from "lucide-react";
-import { getAuthClient, getDb } from "@/lib/firebase/client";
+import { getAuthClient } from "@/lib/firebase/client";
 import { useAuth } from "@/components/auth/auth-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,6 +18,9 @@ import { Label } from "@/components/ui/label";
 import { BrandMark } from "@/components/brand/brand-mark";
 import { friendlyAuthError } from "@/lib/auth/errors";
 import { passwordStrength } from "@/lib/strength";
+import { disableLocalDemo, isLocalDemoActive } from "@/lib/demo/local";
+import { saveProfile } from "@/lib/hydrate";
+import { withTimeout } from "@/lib/utils/timers";
 import { cn } from "@/lib/utils/cn";
 
 type AuthMode = "signin" | "signup" | "forgot";
@@ -118,24 +120,22 @@ export default function LoginPage() {
 
       setBusy(true);
       try {
+        if (isLocalDemoActive()) {
+          disableLocalDemo();
+        }
         const auth = getAuthClient();
         const userCred = await createUserWithEmailAndPassword(auth, cleanEmail, password);
         // Pre-provision user doc to eliminate profile race conditions during onboarding
         if (userCred.user) {
-          try {
-            await setDoc(
-              doc(getDb(), "users", userCred.user.uid),
-              {
-                uid: userCred.user.uid,
-                email: cleanEmail,
-                createdAt: Date.now(),
-                plan: "free",
-              },
-              { merge: true },
-            );
-          } catch {
-            // Non-fatal client fallback handled gracefully by /pin and server actions
-          }
+          await withTimeout(
+            saveProfile({
+              email: cleanEmail,
+              createdAt: Date.now(),
+              plan: "free",
+            }),
+            3_000,
+            "Profile pre-provision timeout",
+          ).catch(() => undefined);
         }
       } catch (err) {
         setError(friendlyAuthError(err));
@@ -152,6 +152,9 @@ export default function LoginPage() {
 
     setBusy(true);
     try {
+      if (isLocalDemoActive()) {
+        disableLocalDemo();
+      }
       const auth = getAuthClient();
       await signInWithEmailAndPassword(auth, cleanEmail, password);
     } catch (err) {

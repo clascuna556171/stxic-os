@@ -8,10 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { doc, setDoc } from "firebase/firestore";
-import { getDb } from "@/lib/firebase/client";
-import { getProfile, getSettings } from "@/lib/hydrate";
+import { getProfile, getSettings, saveProfile, saveSettings } from "@/lib/hydrate";
 import { setPin, saveMasterPassword, verifyPin } from "@/lib/auth/actions";
+import { withTimeout } from "@/lib/utils/timers";
 import {
   constantTimeEqual,
   deriveKey,
@@ -62,31 +61,45 @@ export default function PinPage() {
   // Decide onboarding vs verify vs change-pin; load biometric config when present.
   useEffect(() => {
     if (!user) return;
+    let cancelled = false;
     void (async () => {
-      const settings = await getSettings();
-      if (!settings.ok) {
-        setError("Could not load your settings. Try signing in again.");
-        return;
-      }
-      if (isChangeMode && settings.data.pinHash) {
-        const activeKey = getSessionKey();
-        if (activeKey) {
-          try {
-            const raw = await exportDek(activeKey);
-            setDekRaw(raw);
-            setPhase("recoverPin");
-            return;
-          } catch {
-            // Fall through to verify PIN first
+      try {
+        const settings = await withTimeout(getSettings(), 6_000, "Settings load timeout");
+        if (cancelled) return;
+        if (!settings.ok) {
+          setPhase("onboardMaster");
+          return;
+        }
+        if (isChangeMode && settings.data.pinHash) {
+          const activeKey = getSessionKey();
+          if (activeKey) {
+            try {
+              const raw = await exportDek(activeKey);
+              if (cancelled) return;
+              setDekRaw(raw);
+              setPhase("recoverPin");
+              return;
+            } catch {
+              // Fall through to verify PIN first
+            }
           }
         }
-      }
-      setPhase(settings.data.pinHash ? "verify" : "onboardMaster");
-      const profile = await getProfile();
-      if (profile.ok && profile.data.biometric) {
-        setBiometricCfg(profile.data.biometric);
+        setPhase(settings.data.pinHash ? "verify" : "onboardMaster");
+        const profile = await withTimeout(getProfile(), 5_000, "Profile load timeout").catch(
+          () => undefined,
+        );
+        if (!cancelled && profile?.ok && profile.data.biometric) {
+          setBiometricCfg(profile.data.biometric);
+        }
+      } catch {
+        if (!cancelled) {
+          setPhase("onboardMaster");
+        }
       }
     })();
+    return () => {
+      cancelled = true;
+    };
   }, [user, isChangeMode]);
 
   const setPinValue = (v: string) => {
@@ -113,27 +126,17 @@ export default function PinPage() {
         const pinSalt = generateSalt();
         const pinHash = await hashSecret(pin, pinSalt);
         const wrappedDekPin = await wrapDek(pin, pinSalt, rawDek);
-        const res = await setPin({ pinSalt, pinHash, wrappedDekPin });
-        if (!res.ok) {
-          // Client-side Firestore fallback
-          try {
-            if (!user) throw new Error("No user");
-            await setDoc(
-              doc(getDb(), "users", user.uid, "settings", "main"),
-              {
-                pinSalt,
-                pinHash,
-                wrappedDekPin,
-                updatedAt: Date.now(),
-              },
-              { merge: true },
-            );
-            await setDoc(doc(getDb(), "users", user.uid), { hasPin: true }, { merge: true });
-          } catch (fallbackErr) {
-            setError(res.error || (fallbackErr as Error).message);
-            setBusy(false);
-            return;
-          }
+        const [settingsSaved, profileSaved, serverSaved] = await Promise.all([
+          saveSettings({ pinSalt, pinHash, wrappedDekPin }),
+          saveProfile({ hasPin: true }),
+          withTimeout(setPin({ pinSalt, pinHash, wrappedDekPin }), 5_000, "PIN save timeout").catch(
+            () => ({ ok: false as const, error: "Server PIN save skipped" }),
+          ),
+        ]);
+        if (!settingsSaved.ok && !profileSaved.ok && !serverSaved.ok) {
+          setError(serverSaved.error || "Failed to save PIN. Try again.");
+          setBusy(false);
+          return;
         }
         const dek = await importDek(rawDek);
         unlock(dek);
@@ -143,7 +146,7 @@ export default function PinPage() {
         setBusy(false);
       }
     },
-    [pin, unlock, router, user, isChangeMode],
+    [pin, unlock, router, isChangeMode],
   );
 
   const handleBiometric = useCallback(async () => {
@@ -167,17 +170,9 @@ export default function PinPage() {
     setBusy(true);
     setError("");
     try {
-      const res = await verifyPin(pin);
-      if (res.ok) {
-        const raw = await unwrapDek(pin, res.data.pinSalt, res.data.wrappedDekPin);
-        const dek = await importDek(raw);
-        unlock(dek);
-        router.replace("/dashboard");
-        return;
-      }
-      // Direct client-side verification fallback
+      // Check client-side settings first (supports local cache + Firestore)
       try {
-        const settings = await getSettings();
+        const settings = await withTimeout(getSettings(), 5_000, "Settings load timeout");
         if (
           settings.ok &&
           settings.data.pinSalt &&
@@ -194,8 +189,21 @@ export default function PinPage() {
           }
         }
       } catch {
-        // fallback failed, display incorrect PIN
+        // Fall through to server action verification
       }
+
+      const res = await withTimeout(verifyPin(pin), 5_000, "PIN verify timeout").catch(() => ({
+        ok: false as const,
+        error: "Incorrect PIN",
+      }));
+      if (res.ok) {
+        const raw = await unwrapDek(pin, res.data.pinSalt, res.data.wrappedDekPin);
+        const dek = await importDek(raw);
+        unlock(dek);
+        router.replace("/dashboard");
+        return;
+      }
+
       setError("Incorrect PIN.");
       setPinState("");
       setBusy(false);
@@ -219,28 +227,23 @@ export default function PinPage() {
       const dek = await generateDek();
       const raw = await exportDek(dek);
       const wrapped = await encryptString(kek, raw);
-      const res = await saveMasterPassword({ encKeySalt: salt, wrappedDekMaster: wrapped });
-      if (!res.ok) {
-        // Client-side Firestore fallback
-        try {
-          if (!user) throw new Error("No user");
-          await setDoc(
-            doc(getDb(), "users", user.uid),
-            {
-              encKeySalt: salt,
-              wrappedDekMaster: wrapped,
-              email: user.email ?? "",
-              uid: user.uid,
-              createdAt: Date.now(),
-              plan: "free",
-            },
-            { merge: true },
-          );
-        } catch (fallbackErr) {
-          setError(res.error || (fallbackErr as Error).message);
-          setBusy(false);
-          return;
-        }
+      const [profileSaved, serverSaved] = await Promise.all([
+        saveProfile({
+          encKeySalt: salt,
+          wrappedDekMaster: wrapped,
+          email: user?.email ?? "",
+          plan: "free",
+        }),
+        withTimeout(
+          saveMasterPassword({ encKeySalt: salt, wrappedDekMaster: wrapped }),
+          5_000,
+          "Master password save timeout",
+        ).catch(() => ({ ok: false as const, error: "Server master password save skipped" })),
+      ]);
+      if (!profileSaved.ok && !serverSaved.ok) {
+        setError(serverSaved.error || "Failed to save master password. Try again.");
+        setBusy(false);
+        return;
       }
       setDekRaw(raw);
       setPhase("onboardPin");

@@ -70,12 +70,31 @@ function currentUid(): string | null {
   return getAuthClient().currentUser?.uid ?? null;
 }
 
+function readLocalJson<T>(key: string, fallback: T): T {
+  if (typeof window === "undefined") return fallback;
+  try {
+    const raw = window.localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function writeLocalJson(key: string, value: unknown): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // ignore storage quota errors
+  }
+}
+
 // ─────────────────────────────────────────────────────────────
 // Encrypted collection CRUD (vault / notes / tasks / income /
 // habits / focusSessions)
 // ─────────────────────────────────────────────────────────────
 
-async function readEncrypted<T>(name: string): Promise<Envelope<T[]>> {
+async function readEncrypted<T extends { id?: string }>(name: string): Promise<Envelope<T[]>> {
   if (isLocalDemoActive()) {
     try {
       const raw = window.localStorage.getItem(`stxic_demo_${name}`);
@@ -89,20 +108,48 @@ async function readEncrypted<T>(name: string): Promise<Envelope<T[]>> {
   if (!uid) return { ok: false, error: "Unauthorized" };
   const key = getSessionKey();
   if (!key) return { ok: false, error: "Session locked" };
+  const localCacheKey = `stxic_enc_${uid}_${name}`;
   try {
     const snap = await getDocs(
       query(collection(getDb(), `users/${uid}/${name}`), limit(READ_LIMIT)),
     );
-    const items: T[] = [];
+    const byId = new Map<string, T>();
     for (const d of snap.docs) {
       const cipher = d.data()?.["cipher"];
       if (typeof cipher !== "string") continue;
-      const plain = await decryptString(key, cipher);
-      items.push(JSON.parse(plain) as T);
+      try {
+        const plain = await decryptString(key, cipher);
+        const parsed = JSON.parse(plain) as T;
+        byId.set(d.id, parsed);
+      } catch {
+        // skip undecryptable record
+      }
     }
-    return { ok: true, data: items };
-  } catch (error) {
-    return { ok: false, error: (error as Error).message };
+    const localCiphers = readLocalJson<Record<string, string>>(localCacheKey, {});
+    for (const [docId, cipher] of Object.entries(localCiphers)) {
+      if (byId.has(docId) || typeof cipher !== "string") continue;
+      try {
+        const plain = await decryptString(key, cipher);
+        byId.set(docId, JSON.parse(plain) as T);
+      } catch {
+        // skip
+      }
+    }
+    return { ok: true, data: [...byId.values()] };
+  } catch {
+    // Fallback to locally cached encrypted records when Firestore is unreachable
+    try {
+      const localCiphers = readLocalJson<Record<string, string>>(localCacheKey, {});
+      const items: T[] = [];
+      for (const cipher of Object.values(localCiphers)) {
+        if (typeof cipher !== "string") continue;
+        const plain = await decryptString(key, cipher);
+        items.push(JSON.parse(plain) as T);
+      }
+      return { ok: true, data: items };
+    } catch (error) {
+      return { ok: false, error: (error as Error).message };
+    }
   }
 }
 
@@ -129,10 +176,18 @@ async function writeEncrypted<T extends { id: string }>(
   if (!key) return { ok: false, error: "Session locked" };
   try {
     const cipher = await encryptString(key, JSON.stringify(item));
-    await setDoc(doc(getDb(), `users/${uid}/${name}/${item.id}`), {
-      cipher,
-      updatedAt: Date.now(),
-    });
+    const localCacheKey = `stxic_enc_${uid}_${name}`;
+    const localCiphers = readLocalJson<Record<string, string>>(localCacheKey, {});
+    localCiphers[item.id] = cipher;
+    writeLocalJson(localCacheKey, localCiphers);
+    try {
+      await setDoc(doc(getDb(), `users/${uid}/${name}/${item.id}`), {
+        cipher,
+        updatedAt: Date.now(),
+      });
+    } catch {
+      // Preserved in encrypted local cache if Firestore write fails
+    }
     return { ok: true, data: item };
   } catch (error) {
     return { ok: false, error: (error as Error).message };
@@ -153,11 +208,17 @@ async function removeEncrypted(name: string, id: string): Promise<Envelope<null>
   }
   const uid = currentUid();
   if (!uid) return { ok: false, error: "Unauthorized" };
+  const localCacheKey = `stxic_enc_${uid}_${name}`;
+  const localCiphers = readLocalJson<Record<string, string>>(localCacheKey, {});
+  if (id in localCiphers) {
+    delete localCiphers[id];
+    writeLocalJson(localCacheKey, localCiphers);
+  }
   try {
     await deleteDoc(doc(getDb(), `users/${uid}/${name}/${id}`));
     return { ok: true, data: null };
-  } catch (error) {
-    return { ok: false, error: (error as Error).message };
+  } catch {
+    return { ok: true, data: null };
   }
 }
 
@@ -213,13 +274,7 @@ export const deleteFocusSession = (id: string) => removeEncrypted("focusSessions
 
 export async function getProfile(): Promise<Envelope<UserProfile>> {
   if (isLocalDemoActive()) {
-    let saved: Partial<UserProfile> = {};
-    try {
-      const raw = window.localStorage.getItem("stxic_demo_profile");
-      if (raw) saved = JSON.parse(raw) as Partial<UserProfile>;
-    } catch {
-      // ignore malformed local demo profile
-    }
+    const saved = readLocalJson<Partial<UserProfile>>("stxic_demo_profile", {});
     return {
       ok: true,
       data: {
@@ -237,41 +292,44 @@ export async function getProfile(): Promise<Envelope<UserProfile>> {
   }
   const uid = currentUid();
   if (!uid) return { ok: false, error: "Unauthorized" };
+  const u = getAuthClient().currentUser;
+  const localCacheKey = `stxic_user_profile_${uid}`;
+  const localSaved = readLocalJson<Partial<UserProfile>>(localCacheKey, {});
+  const defaultProfile: UserProfile = {
+    uid,
+    email: u?.email ?? "",
+    displayName: u?.displayName ?? undefined,
+    createdAt: Date.now(),
+    encKeySalt: "",
+    wrappedDekMaster: "",
+    hasPin: false,
+    plan: "free",
+    ...localSaved,
+  };
   try {
     const snap = await getDoc(doc(getDb(), `users/${uid}`));
     if (!snap.exists()) {
-      const u = getAuthClient().currentUser;
-      return {
-        ok: true,
-        data: {
-          uid,
-          email: u?.email ?? "",
-          displayName: u?.displayName ?? undefined,
-          createdAt: Date.now(),
-          encKeySalt: "",
-          wrappedDekMaster: "",
-          hasPin: false,
-          plan: "free",
-        },
-      };
+      return { ok: true, data: defaultProfile };
     }
-    return { ok: true, data: snap.data() as UserProfile };
-  } catch (error) {
-    return { ok: false, error: (error as Error).message };
+    const merged: UserProfile = {
+      ...defaultProfile,
+      ...(snap.data() as Partial<UserProfile>),
+      uid,
+    };
+    writeLocalJson(localCacheKey, merged);
+    return { ok: true, data: merged };
+  } catch {
+    return { ok: true, data: defaultProfile };
   }
 }
 
 export async function saveProfile(
-  patch: Partial<Pick<UserProfile, "displayName" | "email">>,
+  patch: Partial<Omit<UserProfile, "uid">>,
 ): Promise<Envelope<null>> {
   if (isLocalDemoActive()) {
     try {
-      const raw = window.localStorage.getItem("stxic_demo_profile");
-      const current = raw ? (JSON.parse(raw) as Partial<UserProfile>) : {};
-      window.localStorage.setItem(
-        "stxic_demo_profile",
-        JSON.stringify({ ...current, ...patch, updatedAt: Date.now() }),
-      );
+      const current = readLocalJson<Partial<UserProfile>>("stxic_demo_profile", {});
+      writeLocalJson("stxic_demo_profile", { ...current, ...patch, updatedAt: Date.now() });
       return { ok: true, data: null };
     } catch (error) {
       return { ok: false, error: (error as Error).message };
@@ -279,16 +337,19 @@ export async function saveProfile(
   }
   const uid = currentUid();
   if (!uid) return { ok: false, error: "Unauthorized" };
+  const localCacheKey = `stxic_user_profile_${uid}`;
+  const current = readLocalJson<Partial<UserProfile>>(localCacheKey, {});
+  writeLocalJson(localCacheKey, { ...current, ...patch, uid, updatedAt: Date.now() });
   try {
     await setDoc(
       doc(getDb(), `users/${uid}`),
       { ...patch, uid, updatedAt: Date.now() },
       { merge: true },
     );
-    return { ok: true, data: null };
-  } catch (error) {
-    return { ok: false, error: (error as Error).message };
+  } catch {
+    // Preserved in local cache when Firestore write fails
   }
+  return { ok: true, data: null };
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -298,14 +359,13 @@ export async function saveProfile(
 export async function getSettings(): Promise<Envelope<UserSettings>> {
   if (isLocalDemoActive()) {
     try {
-      const raw = window.localStorage.getItem("stxic_demo_settings");
-      const data = raw ? (JSON.parse(raw) as Partial<UserSettings>) : {};
+      const data = readLocalJson<Partial<UserSettings>>("stxic_demo_settings", {});
       return {
         ok: true,
         data: {
           ...DEFAULT_SETTINGS,
-          obsidian: { ...DEFAULT_SETTINGS.obsidian, ...(data?.obsidian ?? {}) },
           ...data,
+          obsidian: { ...DEFAULT_SETTINGS.obsidian, ...(data?.obsidian ?? {}) },
         },
       };
     } catch (error) {
@@ -314,31 +374,40 @@ export async function getSettings(): Promise<Envelope<UserSettings>> {
   }
   const uid = currentUid();
   if (!uid) return { ok: false, error: "Unauthorized" };
+  const localCacheKey = `stxic_user_settings_${uid}`;
+  const localData = readLocalJson<Partial<UserSettings>>(localCacheKey, {});
   try {
     const snap = await getDoc(doc(getDb(), `users/${uid}/${SETTINGS_DOC}`));
-    const data = snap.data() as Partial<UserSettings> | undefined;
+    const remoteData = snap.data() as Partial<UserSettings> | undefined;
+    const merged: UserSettings = {
+      ...DEFAULT_SETTINGS,
+      ...localData,
+      ...remoteData,
+      obsidian: {
+        ...DEFAULT_SETTINGS.obsidian,
+        ...(localData?.obsidian ?? {}),
+        ...(remoteData?.obsidian ?? {}),
+      },
+    };
+    writeLocalJson(localCacheKey, merged);
+    return { ok: true, data: merged };
+  } catch {
     return {
       ok: true,
       data: {
         ...DEFAULT_SETTINGS,
-        obsidian: { ...DEFAULT_SETTINGS.obsidian, ...(data?.obsidian ?? {}) },
-        ...data,
+        ...localData,
+        obsidian: { ...DEFAULT_SETTINGS.obsidian, ...(localData?.obsidian ?? {}) },
       },
     };
-  } catch (error) {
-    return { ok: false, error: (error as Error).message };
   }
 }
 
 export async function saveSettings(patch: Partial<UserSettings>): Promise<Envelope<null>> {
   if (isLocalDemoActive()) {
     try {
-      const raw = window.localStorage.getItem("stxic_demo_settings");
-      const data = raw ? (JSON.parse(raw) as Partial<UserSettings>) : {};
-      window.localStorage.setItem(
-        "stxic_demo_settings",
-        JSON.stringify({ ...data, ...patch, updatedAt: Date.now() }),
-      );
+      const data = readLocalJson<Partial<UserSettings>>("stxic_demo_settings", {});
+      writeLocalJson("stxic_demo_settings", { ...data, ...patch, updatedAt: Date.now() });
       return { ok: true, data: null };
     } catch (error) {
       return { ok: false, error: (error as Error).message };
@@ -346,16 +415,19 @@ export async function saveSettings(patch: Partial<UserSettings>): Promise<Envelo
   }
   const uid = currentUid();
   if (!uid) return { ok: false, error: "Unauthorized" };
+  const localCacheKey = `stxic_user_settings_${uid}`;
+  const localData = readLocalJson<Partial<UserSettings>>(localCacheKey, {});
+  writeLocalJson(localCacheKey, { ...localData, ...patch, updatedAt: Date.now() });
   try {
     await setDoc(
       doc(getDb(), `users/${uid}/${SETTINGS_DOC}`),
       { ...patch, updatedAt: Date.now() },
       { merge: true },
     );
-    return { ok: true, data: null };
-  } catch (error) {
-    return { ok: false, error: (error as Error).message };
+  } catch {
+    // Preserved in local cache when Firestore write fails
   }
+  return { ok: true, data: null };
 }
 
 // ── Obsidian config (v1.5, within settings) ──────────────────

@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { clampMove, clampResize, compact, GRID_COLS } from "@/lib/dashboard/grid";
 import { defaultLayout, WIDGETS } from "@/lib/dashboard/widgets";
-import type { DashboardWidget } from "@/types";
+import {
+  netByMonth,
+  startOfWeekFocusDays,
+} from "@/components/features/dashboard/bento-helpers";
+import type { DashboardWidget, FocusSession, Habit, TaskItem, Transaction } from "@/types";
 
 describe("clampMove", () => {
   it("keeps x within the grid", () => {
@@ -65,5 +69,82 @@ describe("defaultLayout", () => {
       expect(w.x + w.w).toBeLessThanOrEqual(GRID_COLS);
       expect(w.y).toBeGreaterThanOrEqual(0);
     }
+  });
+});
+
+describe("BentoOverview helpers", () => {
+  it("netByMonth builds 6 consecutive monthly buckets and sums income/expense", () => {
+    const fixedNow = new Date(2026, 9, 15).getTime(); // Oct 2026
+    const txs: Transaction[] = [
+      {
+        id: "t1",
+        type: "income",
+        label: "Salary",
+        amount: 5000,
+        currency: "PHP",
+        category: "Salary",
+        date: fixedNow,
+        createdAt: fixedNow,
+        updatedAt: fixedNow,
+      },
+      {
+        id: "t2",
+        type: "expense",
+        label: "Rent",
+        amount: 1800,
+        currency: "PHP",
+        category: "Housing",
+        date: fixedNow,
+        createdAt: fixedNow,
+        updatedAt: fixedNow,
+      },
+    ];
+    const series = netByMonth(txs, 6, fixedNow);
+    expect(series).toHaveLength(6);
+    const last = series[series.length - 1]!;
+    expect(last.key).toBe("2026-10");
+    expect(last.income).toBe(5000);
+    expect(last.expense).toBe(1800);
+  });
+
+  it("startOfWeekFocusDays returns 7 Mon-Sun buckets with focus minutes and habit/task scores", () => {
+    const fixedNow = new Date(2026, 9, 21, 14, 0, 0).getTime(); // Wed Oct 21 2026
+    const sessions: FocusSession[] = [
+      {
+        id: "f1",
+        start: fixedNow,
+        duration: 30 * 60,
+        createdAt: fixedNow,
+      },
+    ];
+    const tasks: TaskItem[] = [
+      {
+        id: "task1",
+        title: "Done task",
+        status: "done",
+        priority: "P1",
+        type: "task",
+        createdAt: fixedNow,
+        updatedAt: fixedNow,
+      },
+    ];
+    const habits: Habit[] = [
+      {
+        id: "h1",
+        name: "Run",
+        streak: 1,
+        log: { "2026-10-21": true },
+        createdAt: fixedNow,
+      },
+    ];
+    const days = startOfWeekFocusDays(sessions, tasks, habits, fixedNow);
+    expect(days).toHaveLength(7);
+    expect(days.map((d) => d.label)).toEqual(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]);
+    const wed = days[2]!;
+    expect(wed.isToday).toBe(true);
+    expect(wed.minutes).toBe(30);
+    expect(wed.habitsDone).toBe(1);
+    expect(wed.tasksUpdated).toBe(1);
+    expect(wed.score).toBe(30 + 15 + 20);
   });
 });
