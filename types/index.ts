@@ -19,7 +19,7 @@ export type Currency = "PHP" | "USD" | "EUR" | "JPY";
 
 export type ThemeMode = "dark" | "light";
 
-export type ThemePresetName = "stxc" | "mars" | "midnight" | "mono";
+export type ThemePresetName = "stxc" | "mars" | "midnight" | "mono" | "neon";
 
 // ─────────────────────────────────────────────────────────────
 // Auth / user

@@ -10,6 +10,14 @@ export const PRESETS: Record<ThemePresetName, ThemePreset> = {
     radius: "10px",
     font: "Inter",
   },
+  neon: {
+    name: "neon",
+    label: "Cyber Lime",
+    accent: "#d4ff38",
+    surface: "#111317",
+    radius: "14px",
+    font: "Inter",
+  },
   mars: {
     name: "mars",
     label: "Mars",

@@ -28,17 +28,19 @@ export function MobileNav() {
 
   return (
     <>
-      <nav className="border-border bg-surface fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t pb-[env(safe-area-inset-bottom)] md:hidden">
+      <nav className="border-border/80 bg-surface/90 shadow-xl backdrop-blur-xl fixed inset-x-3 bottom-3 z-30 flex items-center justify-around rounded-2xl border py-1.5 md:hidden max-w-lg mx-auto">
         {primary.map((item) => (
           <Link
             key={item.href}
             href={item.href}
             className={cn(
-              "flex flex-col items-center gap-1 py-2 text-[11px] transition-colors",
-              isActive(item.href) ? "text-accent" : "text-muted active:text-foreground",
+              "flex flex-col items-center gap-1 py-1 px-3 rounded-xl text-[11px] font-medium transition-all",
+              isActive(item.href)
+                ? "bg-accent/15 text-accent"
+                : "text-muted active:text-foreground",
             )}
           >
-            <item.icon className="size-5" />
+            <item.icon className="size-4.5" />
             {item.label}
           </Link>
         ))}
@@ -47,15 +49,15 @@ export function MobileNav() {
           type="button"
           onClick={() => setMoreOpen(true)}
           className={cn(
-            "flex flex-col items-center gap-1 py-2 text-[11px] transition-colors",
+            "flex flex-col items-center gap-1 py-1 px-3 rounded-xl text-[11px] font-medium transition-all",
             overflow.some((i) => isActive(i.href)) || moreOpen
-              ? "text-accent"
+              ? "bg-accent/15 text-accent"
               : "text-muted active:text-foreground",
           )}
           aria-haspopup="dialog"
           aria-expanded={moreOpen}
         >
-          <LayoutGrid className="size-5" />
+          <LayoutGrid className="size-4.5" />
           More
         </button>
       </nav>

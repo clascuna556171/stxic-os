@@ -14,9 +14,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 function ShellLoading() {
   return (
     <div className="flex min-h-dvh">
-      <div className="border-border bg-surface hidden w-56 shrink-0 border-r md:block" />
+      <div className="border-border bg-surface hidden w-[72px] shrink-0 border-r md:block" />
       <div className="flex flex-1 flex-col">
-        <div className="border-border h-14 border-b" />
+        <div className="border-border h-16 border-b" />
         <div className="space-y-4 p-6">
           <Skeleton className="h-8 w-40" />
           <Skeleton className="h-40 w-full" />
