@@ -42,6 +42,7 @@ export default function FocusPage() {
     sessions: 0,
   });
   const sessionsRef = useRef<FocusSession[]>([]);
+  const targetEndRef = useRef<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -60,8 +61,15 @@ export default function FocusPage() {
   }, []);
 
   useEffect(() => {
-    if (!running) return;
-    const id = setInterval(() => setSecondsLeft((s) => (s > 0 ? s - 1 : 0)), 1000);
+    if (!running) {
+      targetEndRef.current = null;
+      return;
+    }
+    const id = setInterval(() => {
+      if (!targetEndRef.current) return;
+      const remaining = Math.max(0, Math.ceil((targetEndRef.current - Date.now()) / 1000));
+      setSecondsLeft(remaining);
+    }, 250);
     return () => clearInterval(id);
   }, [running]);
 
@@ -96,6 +104,7 @@ export default function FocusPage() {
 
   function selectMode(m: FocusMode) {
     if (m === mode) return;
+    targetEndRef.current = null;
     setMode(m);
     setRunning(false);
     const total = durations[m] * 60;
@@ -105,18 +114,22 @@ export default function FocusPage() {
 
   function toggleRun() {
     if (running) {
+      targetEndRef.current = null;
       setRunning(false);
       return;
     }
-    if (secondsLeft <= 0) {
-      const total = durations[mode] * 60;
-      setSecondsLeft(total);
-      setSessionSeconds(total);
+    let remaining = secondsLeft;
+    if (remaining <= 0) {
+      remaining = durations[mode] * 60;
+      setSecondsLeft(remaining);
+      setSessionSeconds(remaining);
     }
+    targetEndRef.current = Date.now() + remaining * 1000;
     setRunning(true);
   }
 
   function reset() {
+    targetEndRef.current = null;
     setRunning(false);
     const total = durations[mode] * 60;
     setSecondsLeft(total);

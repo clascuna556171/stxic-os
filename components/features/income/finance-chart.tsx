@@ -2,11 +2,10 @@
 
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { MonthNet } from "@/lib/finance";
-import { currencySymbol } from "@/lib/utils/currency";
+import { formatCurrency } from "@/lib/utils/currency";
 import type { Currency } from "@/types";
 
 export function FinanceChart({ data, currency }: { data: MonthNet[]; currency: Currency }) {
-  const symbol = currencySymbol(currency);
   return (
     <div className="h-64 w-full">
       <ResponsiveContainer width="100%" height="100%">
@@ -22,10 +21,11 @@ export function FinanceChart({ data, currency }: { data: MonthNet[]; currency: C
             tickLine={false}
             axisLine={false}
             tick={{ fill: "var(--text-muted)", fontSize: 12 }}
-            width={56}
+            tickFormatter={(val: number) => formatCurrency(val, currency, true)}
+            width={64}
           />
           <Tooltip
-            formatter={(value, name) => [`${symbol}${Number(value)}`, name]}
+            formatter={(value, name) => [formatCurrency(Number(value), currency), name]}
             contentStyle={{
               background: "var(--surface)",
               border: "1px solid var(--border)",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Check, Flame, Plus, Sparkles, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +14,9 @@ import { currentStreak, dayKey, habitNudgeMessages, toggleCompletion, weekLog } 
 import { cn } from "@/lib/utils/cn";
 import type { Habit } from "@/types";
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+const WEEK_DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
 export default function HabitsPage() {
   const [habits, setHabits] = useState<Habit[]>([]);
   const [loading, setLoading] = useState(true);
@@ -22,6 +25,17 @@ export default function HabitsPage() {
   const [emoji, setEmoji] = useState("");
   const [nudge, setNudge] = useState<Record<string, string>>({});
   const [nudging, setNudging] = useState<string | null>(null);
+
+  const weekDays = useMemo(() => {
+    if (!now) return [];
+    const list: { letter: string; isToday: boolean }[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now - i * DAY_MS);
+      const dayName = WEEK_DAYS[d.getDay()] ?? "";
+      list.push({ letter: dayName[0] ?? "", isToday: i === 0 });
+    }
+    return list;
+  }, [now]);
 
   useEffect(() => {
     let cancelled = false;
@@ -163,14 +177,31 @@ export default function HabitsPage() {
                       </Badge>
                     ) : null}
                   </div>
-                  <div className="mt-2 flex items-center gap-1">
-                    {weekLog(habit.log, now).map((on, i) => (
-                      <span
-                        key={i}
-                        className={cn("size-2 rounded-full", on ? "bg-accent" : "bg-surface-2")}
-                        aria-hidden
-                      />
-                    ))}
+                  <div className="mt-2 flex items-center gap-2">
+                    {weekLog(habit.log, now).map((on, i) => {
+                      const dayInfo = weekDays[i];
+                      return (
+                        <div key={i} className="flex flex-col items-center gap-1">
+                          <span
+                            className={cn(
+                              "text-[10px]",
+                              dayInfo?.isToday
+                                ? "text-accent font-semibold"
+                                : "text-muted",
+                            )}
+                          >
+                            {dayInfo?.letter}
+                          </span>
+                          <span
+                            className={cn(
+                              "size-2 rounded-full",
+                              on ? "bg-accent" : "bg-surface-2",
+                            )}
+                            aria-hidden
+                          />
+                        </div>
+                      );
+                    })}
                   </div>
                   {nudge[habit.id] ? (
                     <p className="text-muted mt-2 text-sm">{nudge[habit.id]}</p>

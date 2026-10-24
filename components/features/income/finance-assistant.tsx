@@ -40,12 +40,11 @@ const FINANCE_KINDS: AiAction["kind"][] = [
 export function FinanceAssistant({
   defaultCurrency,
   context,
-  goals: _goals,
   onChanged,
 }: {
   defaultCurrency: Currency;
   context: string;
-  goals: SavingsGoal[];
+  goals?: SavingsGoal[];
   onChanged: () => void;
 }) {
   const [messages, setMessages] = useState<Msg[]>([]);

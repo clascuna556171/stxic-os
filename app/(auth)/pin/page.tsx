@@ -213,6 +213,26 @@ export default function PinPage() {
     void finalizePin(dekRaw);
   }, [pin, confirming, firstPin, dekRaw, finalizePin]);
 
+  useEffect(() => {
+    if (phase !== "verify" && phase !== "onboardPin" && phase !== "recoverPin") return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (/^[0-9]$/.test(e.key)) {
+        e.preventDefault();
+        addDigit(e.key);
+      } else if (e.key === "Backspace") {
+        e.preventDefault();
+        backspace();
+      } else if (e.key === "Enter" && pin.length >= 4 && !busy) {
+        e.preventDefault();
+        if (phase === "verify") void handleVerify();
+        else handleSetPinSubmit();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [phase, pin, busy, addDigit, backspace, handleVerify, handleSetPinSubmit]);
+
   if (phase === "loading" || initializing) {
     return (
       <main className="flex min-h-dvh items-center justify-center">
@@ -234,7 +254,13 @@ export default function PinPage() {
             </CardHeader>
             <CardContent className="flex flex-col items-center gap-6">
               <PinDots value={pin} />
-              <PinPad onDigit={addDigit} onBackspace={backspace} disabled={busy} />
+              <PinPad
+                onDigit={addDigit}
+                onBackspace={backspace}
+                disabled={busy}
+                maxLength={6}
+                value={pin}
+              />
               {error ? (
                 <p role="alert" className="text-danger text-sm">
                   {error}
@@ -345,7 +371,13 @@ export default function PinPage() {
             </CardHeader>
             <CardContent className="flex flex-col items-center gap-6">
               <PinDots value={pin} />
-              <PinPad onDigit={addDigit} onBackspace={backspace} disabled={busy} />
+              <PinPad
+                onDigit={addDigit}
+                onBackspace={backspace}
+                disabled={busy}
+                maxLength={6}
+                value={pin}
+              />
               {error ? (
                 <p role="alert" className="text-danger text-sm">
                   {error}

@@ -5,7 +5,6 @@ import Link from "next/link";
 import {
   ArrowRight,
   CheckCircle2,
-  CreditCard,
   FileText,
   Flame,
   ListTodo,
@@ -17,7 +16,6 @@ import {
   Wallet,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { toast } from "@/components/ui/toaster";
 import { undoAiAction, type ActionCandidate, type ActionSnapshot } from "@/lib/ai/executor";
 import type { AiAction } from "@/lib/ai/actions";

@@ -67,7 +67,15 @@ export function TransactionDialog({
       setError("Enter a valid amount.");
       return;
     }
+    if (!date || !date.includes("-")) {
+      setError("Date is required.");
+      return;
+    }
     const [y, m, d] = date.split("-").map(Number);
+    if (!y || !m || !d || isNaN(y) || isNaN(m) || isNaN(d)) {
+      setError("Enter a valid date.");
+      return;
+    }
     const now = Date.now();
     const entry: Transaction = {
       id: initial?.id ?? crypto.randomUUID(),

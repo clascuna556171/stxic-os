@@ -120,6 +120,17 @@ export function NoteEditor({
     }
   }
 
+  async function handleBack() {
+    if (timer.current) {
+      clearTimeout(timer.current);
+      timer.current = null;
+    }
+    if (saveState === "dirty") {
+      await persist();
+    }
+    onBack();
+  }
+
   function exportMarkdown() {
     downloadObsidianNote(buildNote());
   }
@@ -190,7 +201,7 @@ export function NoteEditor({
             variant="ghost"
             size="icon"
             className="md:hidden"
-            onClick={onBack}
+            onClick={() => void handleBack()}
             aria-label="Back"
           >
             <ArrowLeft />

@@ -1,7 +1,17 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Lock, LogOut, Moon, Sun } from "lucide-react";
+import {
+  CircleDollarSign,
+  FileText,
+  KeyRound,
+  ListTodo,
+  Lock,
+  LogOut,
+  Moon,
+  Sun,
+  Timer,
+} from "lucide-react";
 import { useTheme } from "@/components/theme/theme-provider";
 import { useAuth } from "@/components/auth/auth-provider";
 import { NAV_ITEMS } from "@/components/layout/nav-items";
@@ -24,6 +34,49 @@ export function useCommandItems(): CommandItem[] {
     icon: <n.icon />,
     onSelect: () => router.push(n.href),
   }));
+
+  const quickActions: CommandItem[] = [
+    {
+      id: "quick:task",
+      title: "New Task",
+      keywords: "new create task todo add",
+      group: "Actions",
+      icon: <ListTodo />,
+      onSelect: () => router.push("/tasks"),
+    },
+    {
+      id: "quick:note",
+      title: "New Note",
+      keywords: "new create note write document add",
+      group: "Actions",
+      icon: <FileText />,
+      onSelect: () => router.push("/notes"),
+    },
+    {
+      id: "quick:transaction",
+      title: "Add Transaction",
+      keywords: "new add transaction income expense money finance",
+      group: "Actions",
+      icon: <CircleDollarSign />,
+      onSelect: () => router.push("/income"),
+    },
+    {
+      id: "quick:vault",
+      title: "New Vault Item",
+      keywords: "new create password vault secret item",
+      group: "Actions",
+      icon: <KeyRound />,
+      onSelect: () => router.push("/vault"),
+    },
+    {
+      id: "quick:focus",
+      title: "Start Focus Timer",
+      keywords: "focus pomodoro timer start session",
+      group: "Actions",
+      icon: <Timer />,
+      onSelect: () => router.push("/focus"),
+    },
+  ];
 
   const actions: CommandItem[] = [
     {
@@ -52,5 +105,5 @@ export function useCommandItems(): CommandItem[] {
     },
   ];
 
-  return [...navigate, ...actions];
+  return [...quickActions, ...navigate, ...actions];
 }

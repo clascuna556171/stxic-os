@@ -9,9 +9,12 @@ interface PinPadProps {
   onBackspace: () => void;
   disabled?: boolean;
   maxLength?: number;
+  value?: string;
 }
 
-export function PinPad({ onDigit, onBackspace, disabled, maxLength }: PinPadProps) {
+export function PinPad({ onDigit, onBackspace, disabled, maxLength, value }: PinPadProps) {
+  const isMaxReached = maxLength !== undefined && value !== undefined && value.length >= maxLength;
+  const isDigitDisabled = disabled || isMaxReached;
   const base =
     "flex h-14 items-center justify-center rounded-xl border border-border bg-surface text-lg font-medium text-foreground transition-colors hover:bg-surface-2 active:translate-y-px disabled:cursor-not-allowed disabled:opacity-50";
 
@@ -22,7 +25,7 @@ export function PinPad({ onDigit, onBackspace, disabled, maxLength }: PinPadProp
           key={d}
           type="button"
           className={base}
-          disabled={disabled || maxLength !== undefined}
+          disabled={isDigitDisabled}
           onClick={() => onDigit(d)}
         >
           {d}
@@ -32,7 +35,7 @@ export function PinPad({ onDigit, onBackspace, disabled, maxLength }: PinPadProp
       <button
         type="button"
         className={base}
-        disabled={disabled || maxLength !== undefined}
+        disabled={isDigitDisabled}
         onClick={() => onDigit("0")}
       >
         0
