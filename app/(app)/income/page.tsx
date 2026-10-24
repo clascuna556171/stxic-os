@@ -403,7 +403,7 @@ export default function IncomePage() {
                   <Card>
                     <CardHeader className="flex-row items-center justify-between pb-2">
                       <CardTitle>Accounts</CardTitle>
-                      <Button variant="ghost" size="sm" onClick={() => setTxDialog({ open: true })}>
+                      <Button variant="ghost" size="sm" onClick={() => setAccDialog({ open: true })}>
                         <Plus />
                         Add
                       </Button>
@@ -630,8 +630,11 @@ export default function IncomePage() {
                         </Button>
                       </div>
                     </CardHeader>
-                    <CardContent className="font-mono text-lg font-semibold">
-                      {formatCurrency(a.balance, a.currency)}
+                    <CardContent className="flex flex-col gap-1">
+                      <span className="font-mono text-lg font-semibold">
+                        {formatCurrency(a.balance, a.currency)}
+                      </span>
+                      {a.notes ? <p className="text-muted truncate text-xs">{a.notes}</p> : null}
                     </CardContent>
                   </Card>
                 ))}
@@ -758,6 +761,7 @@ export default function IncomePage() {
       )}
 
       <TransactionDialog
+        key={`${txDialog.editing?.id ?? "new-tx"}-${txDialog.open ? "open" : "closed"}-${defaultCurrency}`}
         open={txDialog.open}
         onOpenChange={(o) => !o && setTxDialog({ open: false })}
         initial={txDialog.editing}
@@ -768,6 +772,7 @@ export default function IncomePage() {
       />
 
       <AccountDialog
+        key={`${accDialog.editing?.id ?? "new-acc"}-${accDialog.open ? "open" : "closed"}-${defaultCurrency}`}
         open={accDialog.open}
         onOpenChange={(o) => !o && setAccDialog({ open: false })}
         initial={accDialog.editing}
@@ -776,6 +781,7 @@ export default function IncomePage() {
       />
 
       <SavingsDialog
+        key={`${goalDialog.editing?.id ?? "new-goal"}-${goalDialog.open ? "open" : "closed"}-${defaultCurrency}`}
         open={goalDialog.open}
         onOpenChange={(o) => !o && setGoalDialog({ open: false })}
         initial={goalDialog.editing}

@@ -213,16 +213,25 @@ export const deleteFocusSession = (id: string) => removeEncrypted("focusSessions
 
 export async function getProfile(): Promise<Envelope<UserProfile>> {
   if (isLocalDemoActive()) {
+    let saved: Partial<UserProfile> = {};
+    try {
+      const raw = window.localStorage.getItem("stxic_demo_profile");
+      if (raw) saved = JSON.parse(raw) as Partial<UserProfile>;
+    } catch {
+      // ignore malformed local demo profile
+    }
     return {
       ok: true,
       data: {
         uid: "demo-guest",
         email: "guest@demo.local",
+        displayName: "Demo Guest",
         createdAt: Date.now(),
         encKeySalt: "",
         wrappedDekMaster: "",
         hasPin: true,
         plan: "free",
+        ...saved,
       },
     };
   }
@@ -230,8 +239,53 @@ export async function getProfile(): Promise<Envelope<UserProfile>> {
   if (!uid) return { ok: false, error: "Unauthorized" };
   try {
     const snap = await getDoc(doc(getDb(), `users/${uid}`));
-    if (!snap.exists()) return { ok: false, error: "No profile" };
+    if (!snap.exists()) {
+      const u = getAuthClient().currentUser;
+      return {
+        ok: true,
+        data: {
+          uid,
+          email: u?.email ?? "",
+          displayName: u?.displayName ?? undefined,
+          createdAt: Date.now(),
+          encKeySalt: "",
+          wrappedDekMaster: "",
+          hasPin: false,
+          plan: "free",
+        },
+      };
+    }
     return { ok: true, data: snap.data() as UserProfile };
+  } catch (error) {
+    return { ok: false, error: (error as Error).message };
+  }
+}
+
+export async function saveProfile(
+  patch: Partial<Pick<UserProfile, "displayName" | "email">>,
+): Promise<Envelope<null>> {
+  if (isLocalDemoActive()) {
+    try {
+      const raw = window.localStorage.getItem("stxic_demo_profile");
+      const current = raw ? (JSON.parse(raw) as Partial<UserProfile>) : {};
+      window.localStorage.setItem(
+        "stxic_demo_profile",
+        JSON.stringify({ ...current, ...patch, updatedAt: Date.now() }),
+      );
+      return { ok: true, data: null };
+    } catch (error) {
+      return { ok: false, error: (error as Error).message };
+    }
+  }
+  const uid = currentUid();
+  if (!uid) return { ok: false, error: "Unauthorized" };
+  try {
+    await setDoc(
+      doc(getDb(), `users/${uid}`),
+      { ...patch, uid, updatedAt: Date.now() },
+      { merge: true },
+    );
+    return { ok: true, data: null };
   } catch (error) {
     return { ok: false, error: (error as Error).message };
   }

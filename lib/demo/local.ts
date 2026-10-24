@@ -75,6 +75,7 @@ export function clearLocalDemoStorage(): void {
       "stxic_demo_habits",
       "stxic_demo_focusSessions",
       "stxic_demo_settings",
+      "stxic_demo_profile",
       "stxic_demo_newsConfig",
       "stxic_demo_blackboard",
       "stxic_demo_fxCache",

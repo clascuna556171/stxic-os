@@ -5,112 +5,97 @@ import { usePathname } from "next/navigation";
 import { LogOut, User as UserIcon } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { NAV_ITEMS } from "@/components/layout/nav-items";
+import { isEnabled } from "@/lib/config/features";
 import { useAuth } from "@/components/auth/auth-provider";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
+import { Button } from "@/components/ui/button";
 import { BrandMark } from "@/components/brand/brand-mark";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export function Sidebar() {
   const pathname = usePathname();
   const { user, demo, signOut } = useAuth();
 
+  const visibleItems = NAV_ITEMS.filter((item) => !item.feature || isEnabled(item.feature));
+  const displayName = demo
+    ? user?.displayName || "Demo Guest"
+    : user?.displayName || (user?.email ? user.email.split("@")[0] : "Account");
+  const subtitle = demo ? "Sandbox session" : (user?.email ?? "Encrypted vault");
+  const initial = (displayName || "S").charAt(0).toUpperCase();
+
   return (
-    <TooltipProvider delayDuration={150}>
-      <aside className="border-border bg-surface/85 backdrop-blur-md hidden w-[72px] shrink-0 flex-col items-center justify-between border-r py-4 z-20 md:flex">
-        {/* Top: Brand Squircle */}
-        <div className="flex flex-col items-center gap-6">
-          <Link
-            href="/dashboard"
-            className="group relative flex size-11 items-center justify-center rounded-2xl transition-transform hover:scale-105 active:scale-95"
-            aria-label="Stxic Dashboard"
-          >
-            <BrandMark size={28} />
-          </Link>
+    <aside className="border-border bg-surface hidden w-56 shrink-0 flex-col border-r md:flex">
+      {/* Brand Header */}
+      <div className="border-border flex h-14 items-center justify-between border-b px-4">
+        <Link href="/dashboard" className="flex items-center gap-2.5">
+          <BrandMark size={24} />
+          <span className="text-foreground text-sm font-semibold tracking-tight">Stxic</span>
+        </Link>
+        <span className="border-border bg-surface-2 text-muted rounded px-1.5 py-0.5 font-mono text-[10px]">
+          v1.5
+        </span>
+      </div>
 
-          {/* Nav Icons Stack */}
-          <nav className="flex flex-col items-center gap-1.5" aria-label="Main Navigation">
-            {NAV_ITEMS.map((item) => {
-              const active = pathname.startsWith(item.href);
-              return (
-                <Tooltip key={item.href}>
-                  <TooltipTrigger asChild>
-                    <Link
-                      href={item.href}
-                      className={cn(
-                        "group relative flex size-11 items-center justify-center rounded-2xl transition-all duration-200",
-                        active
-                          ? "bg-accent text-accent-fg shadow-md shadow-accent/20"
-                          : "text-muted hover:bg-surface-2 hover:text-foreground",
-                      )}
-                      aria-label={item.label}
-                    >
-                      <item.icon className="size-5 transition-transform duration-150 group-hover:scale-110" />
-                      {active ? (
-                        <span
-                          className="bg-accent absolute -left-2 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full shadow-sm"
-                          aria-hidden
-                        />
-                      ) : null}
-                    </Link>
-                  </TooltipTrigger>
-                  <TooltipContent side="right" sideOffset={14} className="font-medium">
-                    {item.label}
-                  </TooltipContent>
-                </Tooltip>
-              );
-            })}
-          </nav>
-        </div>
+      {/* Primary Navigation */}
+      <nav className="flex-1 space-y-0.5 overflow-y-auto p-2" aria-label="Main Navigation">
+        {visibleItems.map((item) => {
+          const active = pathname.startsWith(item.href);
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                "relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+                active
+                  ? "bg-surface-2 text-foreground font-medium"
+                  : "text-muted hover:bg-surface-2/60 hover:text-foreground",
+              )}
+            >
+              {active ? (
+                <span
+                  className="bg-accent absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-r"
+                  aria-hidden
+                />
+              ) : null}
+              <item.icon className={cn("size-4 shrink-0", active && "text-accent")} />
+              <span className="truncate">{item.label}</span>
+            </Link>
+          );
+        })}
+      </nav>
 
-        {/* Bottom: Profile & Actions */}
-        <div className="flex flex-col items-center gap-3 border-border/80 pt-3">
+      {/* Account & Session Footer */}
+      <div className="border-border flex flex-col gap-2 border-t p-2.5">
+        <Link
+          href="/settings"
+          className={cn(
+            "hover:bg-surface-2 flex items-center gap-2.5 rounded-lg px-2 py-1.5 transition-colors",
+            pathname.startsWith("/settings") && "bg-surface-2",
+          )}
+          title="Account & Settings"
+        >
+          <div className="border-border bg-surface-2 text-accent flex size-7 shrink-0 items-center justify-center rounded-full border text-xs font-semibold">
+            {initial || <UserIcon className="size-3.5" />}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-foreground truncate text-xs font-medium">{displayName}</p>
+            <p className="text-muted truncate text-[11px]">{subtitle}</p>
+          </div>
+        </Link>
+
+        <div className="flex items-center justify-between px-1">
           <ThemeToggle />
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                className="text-muted hover:bg-surface-2 hover:text-foreground flex size-10 items-center justify-center rounded-xl transition-colors"
-                aria-label="User Profile"
-              >
-                <div className="border-border bg-surface-2 flex size-7 items-center justify-center rounded-full border text-xs font-semibold">
-                  {user?.email ? (
-                    user.email.charAt(0).toUpperCase()
-                  ) : demo ? (
-                    "D"
-                  ) : (
-                    <UserIcon className="size-3.5" />
-                  )}
-                </div>
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="right" sideOffset={14}>
-              <div className="text-xs">
-                <p className="font-semibold text-foreground">
-                  {demo ? "Demo Sandbox" : user?.email ?? "Account"}
-                </p>
-                <p className="text-muted">Encrypted Session</p>
-              </div>
-            </TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                onClick={() => void signOut()}
-                className="text-muted hover:bg-danger/10 hover:text-danger flex size-10 items-center justify-center rounded-xl transition-colors"
-                aria-label="Sign out"
-              >
-                <LogOut className="size-4" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="right" sideOffset={14}>
-              Sign out
-            </TooltipContent>
-          </Tooltip>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-muted hover:text-danger h-8 gap-1.5 px-2 text-xs"
+            aria-label="Sign out"
+            onClick={() => void signOut()}
+          >
+            <LogOut className="size-3.5" />
+            <span>Sign out</span>
+          </Button>
         </div>
-      </aside>
-    </TooltipProvider>
+      </div>
+    </aside>
   );
 }

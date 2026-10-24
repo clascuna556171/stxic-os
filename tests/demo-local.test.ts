@@ -5,6 +5,7 @@ import {
   disableLocalDemo,
   clearLocalDemoStorage,
 } from "@/lib/demo/local";
+import { getProfile, getSettings, saveProfile, saveSettings } from "@/lib/hydrate";
 
 describe("local demo sandbox storage", () => {
   const store = new Map<string, string>();
@@ -56,5 +57,34 @@ describe("local demo sandbox storage", () => {
     expect(mockLocalStorage.getItem("stxic_demo_vault")).toBeNull();
     expect(mockLocalStorage.getItem("stxic_demo_fxCache_USD_PHP")).toBeNull();
     expect(mockLocalStorage.getItem("unrelated_key")).toBe("keep_me");
+  });
+
+  it("persists and retrieves profile displayName and defaultCurrency in local demo mode", async () => {
+    enableLocalDemo();
+
+    const initialProfile = await getProfile();
+    expect(initialProfile.ok).toBe(true);
+    if (initialProfile.ok) {
+      expect(initialProfile.data.displayName).toBe("Demo Guest");
+    }
+
+    const saveRes = await saveProfile({ displayName: "Orbit Pilot" });
+    expect(saveRes.ok).toBe(true);
+
+    const updatedProfile = await getProfile();
+    expect(updatedProfile.ok).toBe(true);
+    if (updatedProfile.ok) {
+      expect(updatedProfile.data.displayName).toBe("Orbit Pilot");
+    }
+
+    const currencyRes = await saveSettings({ defaultCurrency: "USD", autoLockMin: 15 });
+    expect(currencyRes.ok).toBe(true);
+
+    const settingsRes = await getSettings();
+    expect(settingsRes.ok).toBe(true);
+    if (settingsRes.ok) {
+      expect(settingsRes.data.defaultCurrency).toBe("USD");
+      expect(settingsRes.data.autoLockMin).toBe(15);
+    }
   });
 });

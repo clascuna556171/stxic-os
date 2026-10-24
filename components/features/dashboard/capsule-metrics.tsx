@@ -1,103 +1,89 @@
 "use client";
 
-import { CheckCircle2, Shield, Target, Timer } from "lucide-react";
-import type { Habit, TaskItem } from "@/types";
+import Link from "next/link";
+import { CheckCircle2, CircleDollarSign, Flame, Timer } from "lucide-react";
+import { formatCurrency } from "@/lib/utils/currency";
+import type { Currency, Habit, TaskItem, Transaction } from "@/types";
 
 interface CapsuleMetricsProps {
   tasks: TaskItem[];
   habits: Habit[];
   focusMin: number;
+  focusSessions?: number;
+  transactions?: Transaction[];
+  currency?: Currency;
 }
 
-export function CapsuleMetrics({ tasks, habits, focusMin }: CapsuleMetricsProps) {
+export function CapsuleMetrics({
+  tasks,
+  habits,
+  focusMin,
+  focusSessions = 0,
+  transactions = [],
+  currency = "PHP",
+}: CapsuleMetricsProps) {
   const completedTasks = tasks.filter((t) => t.status === "done").length;
-  const focusHours = (focusMin / 60).toFixed(1);
-  const totalHabits = habits.length;
+  const openTasks = tasks.length - completedTasks;
   const habitsStreaking = habits.filter((h) => h.streak > 0).length;
+  const netFlow = transactions.reduce(
+    (acc, tx) => acc + (tx.type === "income" ? tx.amount : -tx.amount),
+    0,
+  );
 
-  const totalItems = tasks.length + habits.length;
-  const completedItems = completedTasks + habitsStreaking;
-  const healthPct = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 100;
-
-  const metrics = [
+  const items = [
     {
-      id: "tasks-completed",
-      label: "TASKS COMPLETED",
-      value: completedTasks.toString(),
-      delta: `${completedTasks} of ${tasks.length}`,
-      deltaPositive: completedTasks > 0,
+      id: "tasks",
+      href: "/tasks",
+      label: "Open Tasks",
+      value: String(openTasks),
+      meta: `${completedTasks} completed`,
       icon: CheckCircle2,
-      gradient: "from-blue-500 to-indigo-600",
-      lightBg: "bg-sky-50/80 dark:bg-surface border-sky-200/70 dark:border-border/80",
     },
     {
-      id: "focus-time",
-      label: "FOCUS HOURS",
-      value: `${focusHours}h`,
-      delta: focusMin > 0 ? `${focusMin}m total` : "0m recorded",
-      deltaPositive: focusMin > 0,
+      id: "focus",
+      href: "/focus",
+      label: "Weekly Focus",
+      value: `${Math.round(focusMin)}m`,
+      meta: `${focusSessions} session${focusSessions === 1 ? "" : "s"}`,
       icon: Timer,
-      gradient: "from-emerald-400 to-teal-500",
-      lightBg: "bg-emerald-50/80 dark:bg-surface border-emerald-200/70 dark:border-border/80",
     },
     {
-      id: "habits-active",
-      label: "ACTIVE OBJECTIVES",
-      value: totalHabits > 0 ? `${habitsStreaking}/${totalHabits}` : "0",
-      delta: habitsStreaking > 0 ? `${habitsStreaking} on streak` : "No streak",
-      deltaPositive: habitsStreaking > 0,
-      icon: Target,
-      gradient: "from-cyan-400 to-blue-500",
-      lightBg: "bg-amber-50/80 dark:bg-surface border-amber-200/70 dark:border-border/80",
+      id: "habits",
+      href: "/habits",
+      label: "Habit Streaks",
+      value: `${habitsStreaking}/${habits.length}`,
+      meta: habitsStreaking > 0 ? "Active momentum" : "No active streak",
+      icon: Flame,
     },
     {
-      id: "system-health",
-      label: "PROJECT HEALTH",
-      value: `${healthPct}%`,
-      delta: healthPct >= 80 ? "Optimal" : healthPct >= 50 ? "In Progress" : "Attention",
-      deltaPositive: healthPct >= 50,
-      icon: Shield,
-      gradient: "from-lime-400 to-emerald-600",
-      lightBg: "bg-violet-50/80 dark:bg-surface border-violet-200/70 dark:border-border/80",
+      id: "finance",
+      href: "/income",
+      label: "Net Cashflow",
+      value: formatCurrency(netFlow, currency, true),
+      meta: `${transactions.length} ledger entr${transactions.length === 1 ? "y" : "ies"}`,
+      icon: CircleDollarSign,
     },
   ];
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5 pb-3">
-      {metrics.map((m) => (
-        <div key={m.id} className="card-stacked">
-          <div
-            className={`border rounded-2xl p-4 md:p-5 flex flex-col justify-between shadow-xs dark:shadow-md transition-all hover:-translate-y-0.5 ${m.lightBg}`}
-          >
-            {/* Header: Icon Squircle + Delta Badge */}
-            <div className="flex items-center justify-between mb-4">
-              <div
-                className={`size-10 rounded-xl bg-gradient-to-br ${m.gradient} text-white flex items-center justify-center shadow-sm`}
-              >
-                <m.icon className="size-5" />
-              </div>
-              <span
-                className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
-                  m.deltaPositive
-                    ? "text-emerald-700 bg-emerald-100/90 dark:text-emerald-400 dark:bg-emerald-500/10"
-                    : "text-rose-700 bg-rose-100/90 dark:text-rose-400 dark:bg-rose-500/10"
-                }`}
-              >
-                {m.delta}
-              </span>
-            </div>
-
-            {/* Metric Body */}
-            <div>
-              <p className="text-muted text-[11px] font-medium tracking-wider uppercase mb-1">
-                {m.label}
-              </p>
-              <h4 className="text-foreground text-2xl md:text-3xl font-bold tracking-tight">
-                {m.value}
-              </h4>
-            </div>
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      {items.map((item) => (
+        <Link
+          key={item.id}
+          href={item.href}
+          className="border-border bg-surface hover:bg-surface-2/60 group flex flex-col justify-between gap-3 rounded-xl border p-4 transition-colors"
+        >
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-muted text-xs font-medium">{item.label}</span>
+            <item.icon className="text-muted group-hover:text-accent size-4 transition-colors" />
           </div>
-        </div>
+          <div>
+            <p className="text-foreground font-mono text-xl font-semibold tracking-tight">
+              {item.value}
+            </p>
+            <p className="text-muted mt-0.5 truncate text-xs">{item.meta}</p>
+          </div>
+        </Link>
       ))}
     </div>
   );

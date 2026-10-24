@@ -26,6 +26,8 @@ import {
 } from "@/lib/auth/crypto";
 import { passwordStrength } from "@/lib/strength";
 import { isBiometricAvailable, unlockWithBiometric } from "@/lib/auth/biometric";
+import { getSessionKey } from "@/lib/auth/key-holder";
+import { BrandMark } from "@/components/brand/brand-mark";
 import type { BiometricConfig } from "@/types";
 
 type Phase = "loading" | "verify" | "onboardMaster" | "onboardPin" | "recoverMaster" | "recoverPin";
@@ -35,6 +37,11 @@ export default function PinPage() {
   const router = useRouter();
 
   const [phase, setPhase] = useState<Phase>("loading");
+  const [isChangeMode] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      new URLSearchParams(window.location.search).get("mode") === "change",
+  );
   const [pin, setPinState] = useState("");
   const [confirming, setConfirming] = useState(false);
   const [firstPin, setFirstPin] = useState("");
@@ -52,7 +59,7 @@ export default function PinPage() {
     else if (!initializing && !user) router.replace("/login");
   }, [initializing, user, demo, router]);
 
-  // Decide onboarding vs verify; load biometric config when present.
+  // Decide onboarding vs verify vs change-pin; load biometric config when present.
   useEffect(() => {
     if (!user) return;
     void (async () => {
@@ -61,13 +68,26 @@ export default function PinPage() {
         setError("Could not load your settings. Try signing in again.");
         return;
       }
+      if (isChangeMode && settings.data.pinHash) {
+        const activeKey = getSessionKey();
+        if (activeKey) {
+          try {
+            const raw = await exportDek(activeKey);
+            setDekRaw(raw);
+            setPhase("recoverPin");
+            return;
+          } catch {
+            // Fall through to verify PIN first
+          }
+        }
+      }
       setPhase(settings.data.pinHash ? "verify" : "onboardMaster");
       const profile = await getProfile();
       if (profile.ok && profile.data.biometric) {
         setBiometricCfg(profile.data.biometric);
       }
     })();
-  }, [user]);
+  }, [user, isChangeMode]);
 
   const setPinValue = (v: string) => {
     setError("");
@@ -117,13 +137,13 @@ export default function PinPage() {
         }
         const dek = await importDek(rawDek);
         unlock(dek);
-        router.replace("/dashboard");
+        router.replace(isChangeMode ? "/settings" : "/dashboard");
       } catch {
         setError("Failed to save PIN. Try again.");
         setBusy(false);
       }
     },
-    [pin, unlock, router, user],
+    [pin, unlock, router, user, isChangeMode],
   );
 
   const handleBiometric = useCallback(async () => {
@@ -301,7 +321,12 @@ export default function PinPage() {
   const strength = passwordStrength(master);
 
   return (
-    <main className="flex min-h-dvh flex-col items-center justify-center px-4">
+    <main className="flex min-h-dvh flex-col items-center justify-center gap-6 px-4 py-8">
+      <div className="flex items-center gap-2.5">
+        <BrandMark size={32} />
+        <span className="text-foreground text-xl font-semibold tracking-tight">Stxic</span>
+      </div>
+
       <Card className="w-full max-w-sm">
         {phase === "verify" ? (
           <>
@@ -495,7 +520,16 @@ export default function PinPage() {
           </>
         ) : null}
       </Card>
-      <div className="mt-4 text-center">
+      <div className="flex flex-col items-center gap-2 text-center">
+        {isChangeMode ? (
+          <button
+            type="button"
+            className="text-accent hover:underline text-xs font-medium transition-colors"
+            onClick={() => router.replace("/settings")}
+          >
+            Cancel and return to settings
+          </button>
+        ) : null}
         <button
           type="button"
           className="text-muted hover:text-foreground text-xs transition-colors"

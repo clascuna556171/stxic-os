@@ -10,12 +10,17 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { onAuthStateChanged, signOut as firebaseSignOut, type User } from "firebase/auth";
+import {
+  onAuthStateChanged,
+  signOut as firebaseSignOut,
+  updateProfile as firebaseUpdateProfile,
+  type User,
+} from "firebase/auth";
 import { getAuthClient } from "@/lib/firebase/client";
 import { clearSessionKey, setSessionKey } from "@/lib/auth/key-holder";
 import { endSession, establishSession } from "@/lib/auth/actions";
 import { exportDek, generateDek, importDek } from "@/lib/auth/crypto";
-import { getSettings, saveSettings } from "@/lib/hydrate";
+import { getProfile, getSettings, saveProfile, saveSettings } from "@/lib/hydrate";
 import { resetDemo, seedDemoData } from "@/lib/demo/seed";
 import { withTimeout } from "@/lib/utils/timers";
 import {
@@ -37,6 +42,8 @@ interface AuthState {
   /** Set when establishing the server session fails (never a silent hang). */
   error: string;
   autoLockMin: number;
+  setAutoLockMin: (mins: number) => void;
+  updateDisplayName: (displayName: string) => Promise<boolean>;
   unlock: (key: CryptoKey) => void;
   lock: () => void;
   signOut: () => Promise<void>;
@@ -83,7 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [locked, setLocked] = useState(false);
   const [demo, setDemo] = useState(isLocalDemoActive);
   const [error, setError] = useState("");
-  const [autoLockMin, setAutoLockMin] = useState(5);
+  const [autoLockMin, setAutoLockMinState] = useState(5);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const userRef = useRef<User | null>(null);
   /** uid of the user who is currently unlocked (PIN verified) on this device. */
@@ -112,6 +119,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     [clearTimer, lock],
   );
+
+  const setAutoLockMin = useCallback(
+    (mins: number) => {
+      setAutoLockMinState(mins);
+      if (!locked && userRef.current && !demo) {
+        resetTimer(mins);
+      }
+      void saveSettings({ autoLockMin: mins });
+    },
+    [locked, demo, resetTimer],
+  );
+
+  const updateDisplayName = useCallback(async (displayName: string): Promise<boolean> => {
+    const clean = displayName.trim();
+    const res = await saveProfile({ displayName: clean });
+    if (!isLocalDemoActive()) {
+      const current = getAuthClient().currentUser;
+      if (current && !current.isAnonymous) {
+        await firebaseUpdateProfile(current, { displayName: clean }).catch(() => undefined);
+      }
+    }
+    setUser((prev) => {
+      if (!prev) return prev;
+      const updated = Object.assign(Object.create(Object.getPrototypeOf(prev)), prev, {
+        displayName: clean || (prev.isAnonymous ? "Demo Guest" : null),
+      }) as User;
+      userRef.current = updated;
+      return updated;
+    });
+    return res.ok;
+  }, []);
 
   const unlock = useCallback(
     (key: CryptoKey) => {
@@ -177,7 +215,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (isLocalDemoActive()) {
       void (async () => {
         try {
-          const settings = await getSettings();
+          const [settings, profile] = await Promise.all([getSettings(), getProfile()]);
+          if (settings.ok && settings.data.autoLockMin) {
+            setAutoLockMinState(settings.data.autoLockMin);
+          }
+          if (profile.ok && profile.data.displayName) {
+            setUser((prev) =>
+              prev ? ({ ...prev, displayName: profile.data.displayName } as unknown as User) : prev,
+            );
+          }
           const key = await ensureDemoKey(settings.ok ? settings.data : undefined);
           setSessionKey(key);
         } catch {
@@ -231,7 +277,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             () => undefined,
           );
           if (settings?.ok && settings.data.autoLockMin) {
-            setAutoLockMin(settings.data.autoLockMin);
+            setAutoLockMinState(settings.data.autoLockMin);
           }
           try {
             const key = await ensureDemoKey(settings?.ok ? settings.data : undefined);
@@ -255,7 +301,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           () => undefined,
         );
         if (settings?.ok && settings.data.autoLockMin) {
-          setAutoLockMin(settings.data.autoLockMin);
+          setAutoLockMinState(settings.data.autoLockMin);
         }
       } else {
         clearSessionKey();
@@ -291,6 +337,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       demo,
       error,
       autoLockMin,
+      setAutoLockMin,
+      updateDisplayName,
       unlock,
       lock,
       signOut,
@@ -305,6 +353,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       demo,
       error,
       autoLockMin,
+      setAutoLockMin,
+      updateDisplayName,
       unlock,
       lock,
       signOut,

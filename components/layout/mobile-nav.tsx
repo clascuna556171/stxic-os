@@ -3,13 +3,14 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutGrid } from "lucide-react";
+import { LayoutGrid, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { NAV_ITEMS, PRIMARY_MOBILE_ITEMS } from "@/components/layout/nav-items";
 import { isEnabled } from "@/lib/config/features";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { BrandMark } from "@/components/brand/brand-mark";
+import { useAuth } from "@/components/auth/auth-provider";
 import type { NavItem } from "@/components/layout/nav-items";
 
 function isVisible(item: NavItem): boolean {
@@ -20,6 +21,7 @@ function isVisible(item: NavItem): boolean {
 export function MobileNav() {
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
+  const { user, demo, signOut } = useAuth();
 
   const primary = PRIMARY_MOBILE_ITEMS.filter(isVisible);
   const overflow = NAV_ITEMS.filter((i) => !primary.some((p) => p.href === i.href)).filter(isVisible);
@@ -28,19 +30,17 @@ export function MobileNav() {
 
   return (
     <>
-      <nav className="border-border/80 bg-surface/90 shadow-xl backdrop-blur-xl fixed inset-x-3 bottom-3 z-30 flex items-center justify-around rounded-2xl border py-1.5 md:hidden max-w-lg mx-auto">
+      <nav className="border-border bg-surface/95 fixed inset-x-0 bottom-0 z-30 flex items-center justify-around border-t pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden">
         {primary.map((item) => (
           <Link
             key={item.href}
             href={item.href}
             className={cn(
-              "flex flex-col items-center gap-1 py-1 px-3 rounded-xl text-[11px] font-medium transition-all",
-              isActive(item.href)
-                ? "bg-accent/15 text-accent"
-                : "text-muted active:text-foreground",
+              "flex flex-1 flex-col items-center gap-1 py-2 text-[11px] font-medium transition-colors",
+              isActive(item.href) ? "text-accent" : "text-muted active:text-foreground",
             )}
           >
-            <item.icon className="size-4.5" />
+            <item.icon className="size-5" />
             {item.label}
           </Link>
         ))}
@@ -49,15 +49,15 @@ export function MobileNav() {
           type="button"
           onClick={() => setMoreOpen(true)}
           className={cn(
-            "flex flex-col items-center gap-1 py-1 px-3 rounded-xl text-[11px] font-medium transition-all",
+            "flex flex-1 flex-col items-center gap-1 py-2 text-[11px] font-medium transition-colors",
             overflow.some((i) => isActive(i.href)) || moreOpen
-              ? "bg-accent/15 text-accent"
+              ? "text-accent"
               : "text-muted active:text-foreground",
           )}
           aria-haspopup="dialog"
           aria-expanded={moreOpen}
         >
-          <LayoutGrid className="size-4.5" />
+          <LayoutGrid className="size-5" />
           More
         </button>
       </nav>
@@ -116,8 +116,28 @@ export function MobileNav() {
             </div>
 
             <div className="border-border flex items-center justify-between border-t px-4 py-3">
-              <span className="text-muted text-xs">Theme</span>
-              <ThemeToggle />
+              <div className="min-w-0">
+                <p className="text-foreground truncate text-xs font-medium">
+                  {demo ? "Demo Guest" : (user?.displayName || user?.email || "Account")}
+                </p>
+                <p className="text-muted truncate text-[11px]">
+                  {demo ? "Local sandbox" : "Encrypted session"}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <ThemeToggle />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMoreOpen(false);
+                    void signOut();
+                  }}
+                  className="text-muted hover:bg-danger/10 hover:text-danger flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors"
+                >
+                  <LogOut className="size-3.5" />
+                  Sign out
+                </button>
+              </div>
             </div>
           </DialogPrimitive.Content>
         </DialogPrimitive.Portal>
