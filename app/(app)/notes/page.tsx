@@ -294,7 +294,7 @@ export default function NotesPage() {
         }}
       />
 
-      <div className="border-border flex min-h-0 flex-1 overflow-hidden rounded-xl border">
+      <div className="border-border bg-surface flex min-h-0 flex-1 overflow-hidden rounded-2xl border shadow-sm">
         <aside
           className={cn(
             "bg-surface md:border-border w-full flex-col md:w-72 md:border-r",

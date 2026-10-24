@@ -28,7 +28,7 @@ const Toast = forwardRef<
   <ToastPrimitive.Root
     ref={ref}
     className={cn(
-      "border-border bg-surface flex items-start gap-3 rounded-xl border p-4 shadow-lg transition-all duration-200 data-[state=closed]:translate-x-2 data-[state=closed]:opacity-0 data-[state=open]:translate-x-0 data-[state=open]:opacity-100",
+      "border-border bg-surface flex items-start gap-3 rounded-2xl border p-4 shadow-xl shadow-black/30 transition-[opacity,transform] duration-200 ease-[var(--ease-out)] data-[state=closed]:translate-x-2 data-[state=closed]:opacity-0 data-[state=open]:translate-x-0 data-[state=open]:opacity-100",
       className,
     )}
     {...props}

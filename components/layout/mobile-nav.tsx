@@ -30,14 +30,14 @@ export function MobileNav() {
 
   return (
     <>
-      <nav className="border-border bg-surface/95 fixed inset-x-0 bottom-0 z-30 flex items-center justify-around border-t pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden">
+      <nav className="border-border bg-surface/90 fixed inset-x-0 bottom-0 z-30 flex items-center justify-around border-t pb-[env(safe-area-inset-bottom)] backdrop-blur-lg md:hidden">
         {primary.map((item) => (
           <Link
             key={item.href}
             href={item.href}
             className={cn(
-              "flex flex-1 flex-col items-center gap-1 py-2 text-[11px] font-medium transition-colors",
-              isActive(item.href) ? "text-accent" : "text-muted active:text-foreground",
+              "flex flex-1 flex-col items-center gap-1 py-2 text-[11px] font-medium transition-[color] duration-150",
+              isActive(item.href) ? "text-accent font-semibold" : "text-muted active:text-foreground",
             )}
           >
             <item.icon className="size-5" />
@@ -49,9 +49,9 @@ export function MobileNav() {
           type="button"
           onClick={() => setMoreOpen(true)}
           className={cn(
-            "flex flex-1 flex-col items-center gap-1 py-2 text-[11px] font-medium transition-colors",
+            "flex flex-1 cursor-pointer flex-col items-center gap-1 py-2 text-[11px] font-medium transition-[color] duration-150",
             overflow.some((i) => isActive(i.href)) || moreOpen
-              ? "text-accent"
+              ? "text-accent font-semibold"
               : "text-muted active:text-foreground",
           )}
           aria-haspopup="dialog"
@@ -103,10 +103,10 @@ export function MobileNav() {
                   href={item.href}
                   onClick={() => setMoreOpen(false)}
                   className={cn(
-                    "text-muted flex flex-col items-center gap-1.5 rounded-xl px-2 py-3 text-[11px] transition-colors",
+                    "flex flex-col items-center gap-1.5 rounded-xl px-2 py-3 text-[11px] transition-[background-color,color] duration-150",
                     isActive(item.href)
-                      ? "bg-surface-2 text-foreground font-medium"
-                      : "hover:bg-surface-2/60 hover:text-foreground",
+                      ? "bg-accent text-accent-fg font-semibold shadow-sm"
+                      : "text-muted hover:bg-surface-2/60 hover:text-foreground",
                   )}
                 >
                   <item.icon className="size-5" />

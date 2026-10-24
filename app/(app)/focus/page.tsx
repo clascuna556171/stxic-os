@@ -160,15 +160,17 @@ export default function FocusPage() {
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_20rem]">
         <Card className="flex flex-col items-center gap-6 p-8">
-          <div className="flex flex-wrap justify-center gap-1">
+          <div className="border-border bg-surface-2/60 flex flex-wrap justify-center gap-1 rounded-xl border p-1">
             {FOCUS_PRESETS.map((p) => (
               <button
                 key={p.id}
                 type="button"
                 onClick={() => selectMode(p.id)}
                 className={cn(
-                  "text-muted hover:text-foreground rounded-lg px-3 py-1.5 text-sm transition-colors",
-                  mode === p.id && "bg-surface-2 text-foreground font-medium",
+                  "cursor-pointer rounded-lg px-3.5 py-1.5 text-xs font-medium transition-[background-color,color] duration-200",
+                  mode === p.id
+                    ? "bg-accent text-accent-fg font-semibold shadow-sm"
+                    : "text-muted hover:text-foreground",
                 )}
               >
                 {p.label} · {durations[p.id]}m
@@ -217,7 +219,7 @@ export default function FocusPage() {
               <CardTitle>This week</CardTitle>
             </CardHeader>
             <CardContent className="flex items-center gap-4">
-              <div className="bg-surface-2 text-accent flex size-12 items-center justify-center rounded-full">
+              <div className="bg-surface-2 text-accent border border-white/5 flex size-12 items-center justify-center rounded-xl">
                 <Flame className="size-6" />
               </div>
               <div>

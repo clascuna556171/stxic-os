@@ -8,6 +8,8 @@
 
 :root {
   --radius: 10px;
+  /* Panels (cards, dialogs, bento tiles) sit one step rounder than controls. */
+  --radius-panel: calc(var(--radius) + 6px);
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ring-offset: rgba(0, 0, 0, 0.4);
 }
@@ -69,7 +71,8 @@
   --font-sans: var(--font-inter);
   --font-mono: var(--font-jetbrains);
   --radius-lg: var(--radius);
-  --radius-xl: var(--radius);
+  --radius-xl: var(--radius-panel);
+  --radius-2xl: var(--radius-panel);
 }
 
 /* ── Base ───────────────────────────────────────────────────── */
@@ -264,5 +267,20 @@ body {
 /* ── Subtle surface elevation helpers ─────────────────────────── */
 .subtle-ring {
   box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+/* ── Route transition: a short settle so page swaps don't flash ── */
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.page-enter {
+  animation: page-enter 220ms var(--ease-out) both;
 }
 

@@ -105,15 +105,17 @@ export default function StudyPage() {
           </div>
           <div className="flex flex-col gap-1.5">
             <span className="text-muted text-xs">Study days</span>
-            <div className="flex gap-1">
+            <div className="border-border bg-surface-2/60 flex gap-1 rounded-xl border p-1">
               {DAY_OPTIONS.map((d) => (
                 <button
                   key={d.id}
                   type="button"
                   onClick={() => setDays(d.id)}
                   className={cn(
-                    "text-muted hover:text-foreground rounded-lg px-3 py-1.5 text-sm transition-colors",
-                    days === d.id && "bg-surface-2 text-foreground font-medium",
+                    "cursor-pointer rounded-lg px-3 py-1.5 text-xs font-medium transition-[background-color,color] duration-200",
+                    days === d.id
+                      ? "bg-accent text-accent-fg font-semibold shadow-sm"
+                      : "text-muted hover:text-foreground",
                   )}
                 >
                   {d.label}

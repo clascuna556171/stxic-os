@@ -163,11 +163,11 @@ export default function ConvertPage() {
           onDragLeave={() => setDragOver(false)}
           onDrop={onDrop}
           className={cn(
-            "border-border flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed px-6 py-16 text-center transition-colors",
+            "border-border bg-surface/40 hover:bg-surface/70 flex flex-col items-center justify-center gap-3.5 rounded-2xl border border-dashed px-6 py-16 text-center transition-[background-color,border-color] duration-200",
             dragOver && "border-accent bg-accent/5",
           )}
         >
-          <div className="bg-surface-2 text-accent flex size-12 items-center justify-center rounded-full">
+          <div className="bg-surface-2 text-accent border border-white/5 flex size-14 items-center justify-center rounded-2xl shadow-sm">
             <FileUp className="size-6" />
           </div>
           <p className="text-foreground text-sm font-medium">Drop a file, or browse</p>

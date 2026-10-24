@@ -221,8 +221,8 @@ export default function VaultPage() {
               type="button"
               onClick={() => setActiveTag((t) => (t === tag ? null : tag))}
               className={cn(
-                "border-border bg-surface text-muted hover:text-foreground rounded-full border px-3 py-1 text-xs transition-colors",
-                activeTag === tag && "border-accent bg-surface-2 text-foreground",
+                "border-border bg-surface text-muted hover:text-foreground cursor-pointer rounded-full border px-3 py-1 text-xs transition-[background-color,border-color,color] duration-200",
+                activeTag === tag && "border-accent bg-accent/10 text-accent font-semibold",
               )}
             >
               #{tag}
@@ -234,7 +234,7 @@ export default function VaultPage() {
       {loading ? (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-36" />
+            <Skeleton key={i} className="h-40 rounded-2xl" />
           ))}
         </div>
       ) : error ? (
@@ -259,78 +259,91 @@ export default function VaultPage() {
         />
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {filtered.map((item) => (
-            <div
-              key={item.id}
-              className="border-border bg-surface hover:bg-surface-2/50 flex flex-col gap-3 rounded-xl border p-4 transition-colors"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <p className="text-foreground truncate text-sm font-medium">{item.name}</p>
-                  <p className="text-muted truncate text-xs">{item.username || "—"}</p>
+          {filtered.map((item) => {
+            const initial = item.name.charAt(0).toUpperCase() || "K";
+            return (
+              <div
+                key={item.id}
+                className="border-border bg-surface hover:bg-surface-2/40 hover:border-foreground/15 flex flex-col justify-between gap-4 rounded-2xl border p-4.5 transition-[background-color,border-color,box-shadow] duration-200"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="bg-surface-2 text-accent border border-white/5 flex size-10 shrink-0 items-center justify-center rounded-xl font-mono text-sm font-bold">
+                      {initial}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-foreground truncate text-sm font-semibold tracking-tight">
+                        {item.name}
+                      </p>
+                      <p className="text-muted truncate text-xs">{item.username || "—"}</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void onSave({ ...item, favorite: !item.favorite })}
+                    aria-label={item.favorite ? "Unfavorite" : "Favorite"}
+                    className={cn(
+                      "text-muted hover:text-foreground cursor-pointer shrink-0 rounded-lg p-1.5 transition-colors duration-150",
+                      item.favorite && "text-accent fill-current",
+                    )}
+                  >
+                    <Star className={cn("size-4", item.favorite && "fill-current text-accent")} />
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => void onSave({ ...item, favorite: !item.favorite })}
-                  aria-label={item.favorite ? "Unfavorite" : "Favorite"}
-                  className={cn(
-                    "text-muted hover:text-foreground shrink-0 rounded-md p-1 transition-colors",
-                    item.favorite && "text-accent",
-                  )}
-                >
-                  <Star className={cn("size-4", item.favorite && "fill-current")} />
-                </button>
-              </div>
 
-              <div className="flex flex-wrap items-center gap-1.5">
-                {item.folder ? <Badge variant="muted">{item.folder}</Badge> : null}
-                {item.tags.map((tag) => (
-                  <Badge key={tag} variant="default">
-                    #{tag}
-                  </Badge>
-                ))}
-                {reusedIds.has(item.id) ? (
-                  <Badge variant="warning">
-                    <ShieldAlert className="size-3" />
-                    Reused
-                  </Badge>
-                ) : null}
-              </div>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {item.folder ? <Badge variant="muted">{item.folder}</Badge> : null}
+                  {item.tags.map((tag) => (
+                    <Badge key={tag} variant="default">
+                      #{tag}
+                    </Badge>
+                  ))}
+                  {reusedIds.has(item.id) ? (
+                    <Badge variant="warning">
+                      <ShieldAlert className="size-3" />
+                      Reused
+                    </Badge>
+                  ) : null}
+                </div>
 
-              <div className="mt-auto flex items-center justify-between gap-2">
-                <CardStrength value={item.password} />
-                <div className="flex gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="size-8"
-                    onClick={() => void copy(item.password, "Password")}
-                    aria-label="Copy password"
-                  >
-                    <Copy />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="size-8"
-                    onClick={() => openEdit(item)}
-                    aria-label="Edit"
-                  >
-                    <Pencil />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-muted hover:text-danger size-8"
-                    onClick={() => setDeleting(item)}
-                    aria-label="Delete"
-                  >
-                    <Trash2 />
-                  </Button>
+                <div className="mt-auto flex items-center justify-between gap-2 border-t border-border/50 pt-3">
+                  <CardStrength value={item.password} />
+                  <div className="flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-8 rounded-lg"
+                      onClick={() => void copy(item.password, "Password")}
+                      aria-label="Copy password"
+                      title="Copy password"
+                    >
+                      <Copy className="size-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-8 rounded-lg"
+                      onClick={() => openEdit(item)}
+                      aria-label="Edit"
+                      title="Edit item"
+                    >
+                      <Pencil className="size-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-muted hover:text-danger hover:bg-danger/10 size-8 rounded-lg"
+                      onClick={() => setDeleting(item)}
+                      aria-label="Delete"
+                      title="Delete item"
+                    >
+                      <Trash2 className="size-3.5" />
+                    </Button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

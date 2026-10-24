@@ -160,7 +160,7 @@ export default function HabitsPage() {
           description="Add one above and check it off daily to build a streak."
         />
       ) : (
-        <div className="border-border divide-y rounded-lg border">
+        <div className="border-border bg-surface divide-y divide-border/60 overflow-hidden rounded-2xl border shadow-sm">
           {habits.map((habit) => {
             const streak = currentStreak(habit.log, now);
             const done = habit.log[dayKey(now)] === true;

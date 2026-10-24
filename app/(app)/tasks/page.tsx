@@ -143,12 +143,12 @@ export default function TasksPage() {
             {tasks.length} task{tasks.length === 1 ? "" : "s"} · drag to change status
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="border-border bg-surface-2 flex items-center gap-1 rounded-lg border p-1">
+        <div className="flex items-center gap-2.5">
+          <div className="border-border bg-surface flex items-center gap-1 rounded-xl border p-1">
             {(
               [
-                { id: "kanban", label: "Board", icon: <Kanban /> },
-                { id: "calendar", label: "Calendar", icon: <CalendarDays /> },
+                { id: "kanban", label: "Board", icon: <Kanban className="size-4" /> },
+                { id: "calendar", label: "Calendar", icon: <CalendarDays className="size-4" /> },
               ] as const
             ).map((m) => (
               <button
@@ -156,8 +156,10 @@ export default function TasksPage() {
                 type="button"
                 onClick={() => setView(m.id)}
                 className={cn(
-                  "text-muted inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm transition-colors",
-                  view === m.id && "bg-surface text-foreground font-medium",
+                  "inline-flex cursor-pointer items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-[background-color,color] duration-200",
+                  view === m.id
+                    ? "bg-accent text-accent-fg font-semibold shadow-sm"
+                    : "text-muted hover:text-foreground",
                 )}
               >
                 {m.icon}
@@ -166,8 +168,8 @@ export default function TasksPage() {
             ))}
           </div>
           <Button variant="primary" onClick={() => openNew()}>
-            <Plus />
-            New task
+            <Plus className="size-4" />
+            <span>New task</span>
           </Button>
         </div>
       </header>

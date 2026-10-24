@@ -20,16 +20,20 @@ export function TaskCard({ task, onEdit }: { task: TaskItem; onEdit: (t: TaskIte
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform) }}
       className={cn(
-        "border-border bg-surface hover:bg-surface-2/60 flex flex-col gap-2 rounded-lg border p-3 transition-colors",
-        isDragging && "z-10 opacity-70 shadow-lg",
+        "border-border bg-surface hover:bg-surface-2/60 hover:border-foreground/15 group flex flex-col gap-2.5 rounded-xl border p-3.5 transition-[background-color,border-color,box-shadow] duration-200",
+        isDragging && "z-20 opacity-80 shadow-2xl shadow-black/40 ring-2 ring-accent",
       )}
     >
       <div className="flex items-start justify-between gap-2">
-        <button type="button" onClick={() => onEdit(task)} className="min-w-0 flex-1 text-left">
+        <button
+          type="button"
+          onClick={() => onEdit(task)}
+          className="min-w-0 flex-1 text-left cursor-pointer focus-visible:outline-none"
+        >
           <span
             className={cn(
-              "text-foreground block break-words text-sm font-medium",
-              task.status === "done" && "text-muted line-through",
+              "text-foreground block break-words text-sm font-semibold tracking-tight transition-colors duration-150 group-hover:text-accent",
+              task.status === "done" && "text-muted line-through group-hover:text-muted",
             )}
           >
             {task.title || "Untitled task"}
@@ -38,7 +42,7 @@ export function TaskCard({ task, onEdit }: { task: TaskItem; onEdit: (t: TaskIte
         <span
           {...listeners}
           {...attributes}
-          className="text-muted hover:text-foreground cursor-grab touch-none rounded p-0.5"
+          className="text-muted hover:text-foreground cursor-grab active:cursor-grabbing touch-none rounded-lg p-1 transition-colors duration-150"
           aria-label="Drag to move"
         >
           <GripVertical className="size-4" />
@@ -46,13 +50,20 @@ export function TaskCard({ task, onEdit }: { task: TaskItem; onEdit: (t: TaskIte
       </div>
 
       {task.description ? (
-        <p className="text-muted break-words whitespace-pre-wrap text-xs">{task.description}</p>
+        <p className="text-muted line-clamp-2 break-words text-xs leading-relaxed">
+          {task.description}
+        </p>
       ) : null}
 
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between pt-1">
         <PriorityBadge priority={task.priority} />
         {task.dueDate != null ? (
-          <span className={cn("text-xs", overdue ? "text-danger" : "text-muted")}>
+          <span
+            className={cn(
+              "font-mono text-xs font-medium",
+              overdue ? "text-danger" : "text-muted",
+            )}
+          >
             {formatDate(task.dueDate)}
           </span>
         ) : null}

@@ -166,10 +166,10 @@ export default function SettingsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-6">
-          <div className="border-border bg-surface-2/40 flex flex-wrap items-center justify-between gap-4 rounded-xl border p-4">
+          <div className="border-border bg-surface-2/40 flex flex-wrap items-center justify-between gap-4 rounded-2xl border p-4.5">
             <div className="flex min-w-0 items-center gap-3.5">
-              <div className="border-border bg-surface text-accent flex size-11 shrink-0 items-center justify-center rounded-full border text-sm font-semibold">
-                {avatarInitial || <UserIcon className="size-4" />}
+              <div className="bg-accent text-accent-fg flex size-12 shrink-0 items-center justify-center rounded-full text-base font-bold shadow-sm">
+                {avatarInitial || <UserIcon className="size-5" />}
               </div>
               <div className="min-w-0">
                 <p className="text-foreground truncate text-sm font-semibold">

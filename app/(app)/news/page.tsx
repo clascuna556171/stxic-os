@@ -238,7 +238,7 @@ export default function NewsPage() {
         </div>
       </header>
 
-      <div className="border-border rounded-lg border p-3">
+      <div className="border-border bg-surface rounded-2xl border p-4 shadow-sm">
         <div className="mb-2 flex items-center justify-between">
           <span className="text-muted text-xs font-medium tracking-wide">
             Sources · {enabledCount}/{NEWS_SOURCES.length}

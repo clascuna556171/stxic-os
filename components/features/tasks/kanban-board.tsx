@@ -17,22 +17,28 @@ function Column({
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
   return (
-    <div ref={setNodeRef} className="flex flex-col gap-2">
-      <header className="text-muted flex items-center justify-between px-1 text-xs font-medium tracking-wide uppercase">
-        <span>{STATUS_LABELS[status]}</span>
-        <span className="font-mono">{tasks.length}</span>
+    <div ref={setNodeRef} className="flex flex-col gap-3">
+      <header className="flex items-center justify-between px-1.5">
+        <span className="text-foreground text-xs font-semibold tracking-wide uppercase">
+          {STATUS_LABELS[status]}
+        </span>
+        <span className="border-border bg-surface-2 text-muted rounded-full border px-2 py-0.5 font-mono text-[11px] font-medium">
+          {tasks.length}
+        </span>
       </header>
       <div
         className={cn(
-          "border-border flex min-h-28 flex-1 flex-col gap-2 rounded-xl border border-dashed p-2 transition-colors",
-          isOver && "border-accent bg-surface-2/40",
+          "border-border bg-surface/30 flex min-h-[320px] flex-1 flex-col gap-2.5 rounded-2xl border border-dashed p-3 transition-[background-color,border-color] duration-200",
+          isOver && "border-accent bg-accent/5",
         )}
       >
         {tasks.map((t) => (
           <TaskCard key={t.id} task={t} onEdit={onEdit} />
         ))}
         {tasks.length === 0 ? (
-          <p className="text-muted px-2 py-6 text-center text-xs">Drop tasks here</p>
+          <div className="flex flex-1 items-center justify-center p-6">
+            <p className="text-muted text-center text-xs">Drop tasks here</p>
+          </div>
         ) : null}
       </div>
     </div>

@@ -294,21 +294,23 @@ export default function AiChatPage() {
             Manage your finances, tasks, habits, and notes with intelligent actions.
           </p>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="border-border bg-surface-2/60 flex items-center gap-1 rounded-xl border p-1">
           {PROVIDERS.map((p) => (
             <button
               key={p.id}
               type="button"
               onClick={() => setProvider(p.id)}
               className={cn(
-                "text-muted hover:text-foreground rounded-lg px-3 py-1.5 text-sm transition-colors",
-                provider === p.id && "bg-surface-2 text-foreground font-medium",
+                "cursor-pointer rounded-lg px-3 py-1.5 text-xs font-medium transition-[background-color,color] duration-200",
+                provider === p.id
+                  ? "bg-accent text-accent-fg font-semibold shadow-sm"
+                  : "text-muted hover:text-foreground",
               )}
             >
               {p.label}
             </button>
           ))}
-          <span className="bg-border mx-1 h-4 w-px" aria-hidden />
+          <span className="bg-border mx-1 h-3.5 w-px" aria-hidden />
           <button
             type="button"
             onClick={() => setReasoning((r) => !r)}
@@ -318,8 +320,10 @@ export default function AiChatPage() {
             }
             aria-label="Toggle thinking"
             className={cn(
-              "text-muted hover:text-foreground rounded-lg p-1.5 transition-colors",
-              reasoning && "bg-surface-2 text-accent",
+              "cursor-pointer rounded-lg p-1.5 transition-colors duration-150",
+              reasoning
+                ? "bg-accent/15 text-accent"
+                : "text-muted hover:text-foreground",
             )}
           >
             <Brain className="size-4" />
@@ -327,11 +331,11 @@ export default function AiChatPage() {
         </div>
       </header>
 
-      <div className="border-border bg-surface flex min-h-[65dvh] flex-col overflow-hidden rounded-xl border shadow-sm">
-        <div ref={scrollRef} className="flex flex-1 flex-col gap-4 overflow-y-auto p-4">
+      <div className="border-border bg-surface flex min-h-[65dvh] flex-col overflow-hidden rounded-2xl border shadow-sm">
+        <div ref={scrollRef} className="flex flex-1 flex-col gap-4 overflow-y-auto p-4 sm:p-6">
           {messages.length === 0 ? (
             <div className="flex flex-1 flex-col items-center justify-center gap-3 py-16 text-center">
-              <div className="bg-surface-2 text-accent flex size-12 items-center justify-center rounded-full shadow-inner">
+              <div className="bg-surface-2 text-accent border border-white/5 flex size-12 items-center justify-center rounded-xl shadow-sm">
                 <Sparkles className="size-6" />
               </div>
               <div>
